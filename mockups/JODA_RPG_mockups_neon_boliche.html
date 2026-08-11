@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JODA RPG — Mockups Neon Boliche</title>
+<style>
+:root{
+  --bg:#07070b;--panel:#101019;--panel2:#151522;--line:#2b2b3b;
+  --text:#f8f7f5;--muted:#a7a5af;--pink:#ff3e9d;--cyan:#27e2d2;
+  --violet:#9d42ff;--danger:#ff466f;--yellow:#ffd84a;
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:#050509;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;background-image:radial-gradient(#fff .7px,transparent .7px);background-size:5px 5px}
+button,input,textarea{font:inherit}.app{min-height:100vh}
+.shell{max-width:1440px;margin:auto;padding:22px}
+.demo-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.demo-nav button{border:1px solid var(--line);background:#101018;color:#aaa;padding:10px 14px;border-radius:10px;font-weight:900;cursor:pointer}
+.demo-nav button.active{color:#fff;border-color:#ff3e9d;box-shadow:0 0 20px #ff3e9d22}
+.view{display:none}.view.active{display:block}
+.device-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#777;margin:0 0 9px;font-weight:1000}
+.phone{width:min(100%,430px);min-height:850px;margin:auto;border:7px solid #1a1a21;border-radius:34px;overflow:hidden;box-shadow:0 30px 100px #000b;background:#090912}
+.phone-inner{min-height:836px;padding:18px;background:radial-gradient(circle at 80% 0,#2a1045 0,transparent 35%),#090912}
+.desktop{border:7px solid #18181f;border-radius:18px;overflow:hidden;box-shadow:0 30px 100px #000b;background:#090912}
+.desktop-inner{min-height:720px;padding:22px;background:radial-gradient(circle at 80% 0,#24103c 0,transparent 34%),#090912}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.logo{font-weight:1000;letter-spacing:-.06em;font-size:22px}.sub{font-size:10px;color:#85828d;text-transform:uppercase;letter-spacing:.14em;font-weight:900}
+.phase{background:var(--cyan);color:#06100f;padding:7px 10px;border-radius:99px;font-size:10px;font-weight:1000}
+.hour{font-weight:1000;font-size:22px}.hour small{font-size:9px;color:#777;display:block;text-align:right;letter-spacing:.12em}
+.card{background:#11111b;border:1px solid var(--line);border-radius:18px;padding:15px}
+.card+.card{margin-top:11px}
+.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:#85828d;font-weight:1000}
+h1,h2,h3,p{margin-top:0}.char{font-size:29px;font-weight:1000;letter-spacing:-.05em;margin:4px 0}.quote{color:#aaa7b0;font-size:13px;font-style:italic}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:14px}
+.stat{background:#0a0a0f;border-radius:9px;padding:8px 2px;text-align:center}.stat b{font-size:17px;display:block}.stat span{font-size:8px;color:#777;text-transform:uppercase}
+.na-card{position:relative;overflow:hidden}.na-card.chaos{border-color:#9d42ff;box-shadow:0 0 35px #9d42ff25}
+.na-top{display:flex;justify-content:space-between;align-items:end}.na-num{font-size:52px;line-height:.8;font-weight:1000;letter-spacing:-.07em;color:var(--cyan)}
+.na-state{font-size:10px;font-weight:1000;color:var(--pink)}
+.meter{height:20px;background:#292936;border-radius:99px;overflow:hidden;margin-top:12px}.meter-fill{height:100%;width:60%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink))}
+.meter-labels{display:flex;justify-content:space-between;color:#686672;font-size:8px;margin-top:5px}
+.chaos-panel{margin-top:11px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#39104e,#170b29);border:1px solid #a43cff;box-shadow:0 0 28px #9d42ff2d}
+.chaos-panel h2{margin:3px 0 5px;color:#ff50aa;font-size:25px}.chaos-panel p{font-size:13px;line-height:1.35;color:#ddd}
+.prenda{border-color:#ff3e9d;background:linear-gradient(135deg,#21101d,#131019)}
+.prenda-title{font-size:20px;font-weight:1000;margin:3px 0}.prenda p{font-size:13px;color:#ccc;line-height:1.35;margin:0}
+.action{width:100%;border:0;border-radius:15px;padding:17px 14px;background:var(--pink);color:#160711;font-weight:1000;font-size:18px;cursor:pointer;box-shadow:0 8px 30px #ff3e9d25}
+.action.secondary{background:#1b1b27;color:#fff;border:1px solid #363647;box-shadow:none}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.roll-result{margin-top:11px;text-align:center;border-radius:15px;background:#24113c;padding:14px;font-size:39px;font-weight:1000;color:#dfb4ff}
+.situation{border-left:4px solid var(--cyan);background:#11111b}
+.situation h2{font-size:22px;margin:3px 0 8px}.situation p{font-size:14px;line-height:1.42;color:#ccc;margin:0}
+.next{margin-top:12px;background:linear-gradient(90deg,var(--pink),#b73cff);color:#fff}
+.character-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.character-choice{min-height:118px;text-align:left;padding:14px;border-radius:17px;border:1px solid var(--line);background:#11111b;color:#fff;cursor:pointer}
+.character-choice:hover{border-color:#ff3e9d;transform:translateY(-1px)}.character-choice b{display:block;font-size:19px;margin:5px 0}.character-choice span{font-size:11px;color:#999;line-height:1.3}
+.join-name{width:100%;padding:15px;border:1px solid var(--line);border-radius:13px;background:#09090e;color:#fff;margin:12px 0}
+.step{display:flex;gap:7px;margin-bottom:15px}.step i{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#292936;color:#aaa;font-style:normal;font-weight:1000}.step i.active{background:var(--pink);color:#160711}
+.desktop-layout{display:grid;grid-template-columns:minmax(540px,1.45fr) minmax(340px,.8fr);gap:15px}.player-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.player{background:#11111b;border:1px solid var(--line);border-radius:14px;padding:12px}.player.chaos{border-color:#9d42ff;box-shadow:0 0 20px #9d42ff1c}
+.player-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.player-name{font-weight:1000;font-size:14px}.player-char{font-size:10px;color:#777;margin-top:3px}.na-pill{font-size:12px;font-weight:1000;color:var(--cyan)}.prenda-mini{margin-top:9px;font-size:10px;color:#ff72b7;min-height:27px}.player-controls{display:grid;grid-template-columns:1fr 1fr 1.7fr;gap:5px;margin-top:9px}.player-controls button{border:1px solid #30303e;background:#181821;color:#fff;border-radius:8px;padding:8px 4px;font-weight:1000;cursor:pointer}.player-controls button:last-child{background:#291221;border-color:#74304e;color:#ff8ac5}
+.dm-title{font-size:28px;font-weight:1000;letter-spacing:-.05em;margin:2px 0}.dm-header-right{display:flex;align-items:center;gap:18px}.phase-large{background:#27e2d2;color:#06100f;border-radius:99px;padding:8px 13px;font-size:11px;font-weight:1000}
+.event-list{display:flex;flex-direction:column;gap:9px}.event{border:1px solid var(--line);background:#11111b;border-radius:14px;padding:13px}.event.current{border-color:#27e2d2;box-shadow:0 0 24px #27e2d21c}.event b{display:block;font-size:14px;margin-bottom:5px}.event p{margin:0;color:#aaa;font-size:12px;line-height:1.4}
+.next-situation{width:100%;padding:18px;border:0;border-radius:14px;background:linear-gradient(90deg,var(--pink),#9d42ff);color:#fff;font-size:17px;font-weight:1000;cursor:pointer;box-shadow:0 12px 30px #9d42ff25}
+.dm-stack{display:flex;flex-direction:column;gap:11px}.dm-card{background:#11111b;border:1px solid var(--line);border-radius:16px;padding:15px}.dm-card h3{margin:4px 0 9px}.narrate{width:100%;min-height:80px;background:#09090e;border:1px solid #2e2e3b;color:#fff;border-radius:11px;padding:11px;resize:vertical}.ia-result{margin-top:9px;background:#21102f;border:1px solid #7334a2;border-radius:11px;padding:12px;color:#e5caff;font-size:13px;line-height:1.4}
+.phase-flow{display:flex;gap:7px;align-items:center;margin:11px 0}.phase-dot{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:#171720;color:#777;font-size:10px;font-weight:1000}.phase-dot.active{background:#27e2d2;color:#06100f}.phase-line{width:18px;height:2px;background:#333}
+.history{max-height:145px;overflow:auto}.log{font-size:11px;color:#8d8a95;padding:6px 0;border-bottom:1px solid #22222d}.log strong{color:#ddd}
+@media(max-width:1050px){.desktop-layout{grid-template-columns:1fr}.player-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.shell{padding:12px}.player-grid{grid-template-columns:1fr}.character-grid{grid-template-columns:1fr}.phone{border-width:5px}.desktop-inner{padding:14px}.demo-nav button{flex:1}.dm-header-right{gap:8px}.hour{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="demo-nav">
+    <button class="active" data-view="select">Jugador · selección</button>
+    <button data-view="player">Jugador · partida</button>
+    <button data-view="dm">DM · dashboard</button>
+  </nav>
+
+  <section id="select" class="view active">
+    <div class="device-label">/jugador · onboarding</div>
+    <div class="phone"><div class="phone-inner">
+      <div class="topbar"><div><div class="logo">JODA RPG</div><div class="sub">Elegí tu alter ego</div></div><div class="phase">SALA 4821</div></div>
+      <div class="step"><i class="active">1</i><i>2</i><i>3</i></div>
+      <div class="card"><div class="eyebrow">Paso 1</div><h1 style="font-size:30px;margin:5px 0">¿Quién sos esta noche?</h1><p class="quote">Elegí con sabiduría. O no. Total después vas a estar en NA 4.</p>
+        <input class="join-name" value="Facu" aria-label="Nombre">
+        <div class="character-grid">
+          <button class="character-choice"><div class="eyebrow">CARISMA +1</div><b>El Intenso</b><span>“Si no pasa algo ahora, no pasa nunca.”</span></button>
+          <button class="character-choice"><div class="eyebrow">SUERTE +2</div><b>El Suertudo</b><span>“No sé cómo pasó, pero salió.”</span></button>
+          <button class="character-choice"><div class="eyebrow">ASTUCIA +1</div><b>El Payaso</b><span>“Pará, pará... mirá esto.”</span></button>
+          <button class="character-choice"><div class="eyebrow">AGUANTE +2</div><b>El Gym Bro</b><span>“Tranqui, yo me la banco.”</span></button>
+          <button class="character-choice"><div class="eyebrow">ASTUCIA +2</div><b>El Tímido</b><span>“Yo estoy bien acá... creo.”</span></button>
+          <button class="character-choice"><div class="eyebrow">CARISMA +2</div><b>El Fachero</b><span>“Todo le queda bien.”</span></button>
+        </div>
+        <button class="action" style="margin-top:12px">Entrar a la joda →</button>
+      </div>
+    </div></div>
+  </section>
+
+  <section id="player" class="view">
+    <div class="device-label">/jugador · pantalla durante la noche</div>
+    <div class="phone"><div class="phone-inner">
+      <div class="topbar"><div><div class="logo">JODA RPG</div><div class="sub">Tu partida</div></div><div style="text-align:right"><div class="hour">02:17</div><small style="color:#777">VIERNES · BOLICHE</small></div></div>
+      <div class="topbar" style="margin-top:-6px"><div class="eyebrow">Situación #08</div><div class="phase">BOLICHE</div></div>
+      <div class="card situation"><div class="eyebrow">EVENTO ACTIVO</div><h2>Shot de regalo sospechoso</h2><p>Alguien aparece con un shot que “supuestamente” le regalaron. El DM decide quién lo toma. Si lo tomás: +1 NA y tirás 1d6.</p></div>
+      <div class="card na-card chaos"><div class="na-top"><div><div class="eyebrow">Nivel de Alcohol</div><div class="na-num">3 / 5</div></div><div class="na-state">MODO CAOS</div></div><div class="meter"><div class="meter-fill" style="width:60%"></div></div><div class="meter-labels"><span>0 SOBRIO</span><span>1</span><span>2</span><span>3 CAOS</span><span>5 LEYENDA</span></div></div>
+      <div class="chaos-panel"><div class="eyebrow">HABILIDAD DE CAOS · ACTIVA</div><h2>AHORA O NUNCA</h2><p>Una vez por escena, podés forzar una acción extrema sin tirar dados.</p><button class="action secondary" style="margin-top:10px">Usar AHORA O NUNCA</button></div>
+      <div class="card prenda"><div class="eyebrow">⚠ PRENDA ACTIVA</div><div class="prenda-title">Responder Cantando</div><p>Al menos una frase de cada respuesta tiene que ser cantada.</p></div>
+      <div class="actions"><button class="action">🎲 Tirar dado</button><button class="action secondary">Habilidad</button></div>
+      <div class="roll-result">6 + 1 = 7<br><span style="font-size:10px;color:#ad8ac8;letter-spacing:.12em">ÉXITO BONUS</span></div>
+    </div></div>
+  </section>
+
+  <section id="dm" class="view">
+    <div class="device-label">/dm · notebook del Dungeon Master</div>
+    <div class="desktop"><div class="desktop-inner">
+      <div class="topbar">
+        <div><div class="sub">DUNGEON MASTER · SALA 4821</div><div class="dm-title">JODA RPG</div></div>
+        <div class="dm-header-right"><div class="phase-large">BOLICHE</div><div style="text-align:right"><div class="hour">02:17</div><small style="color:#777">NOCHE EN CURSO</small></div></div>
+      </div>
+      <div class="phase-flow"><div class="phase-dot">PREVIA</div><div class="phase-line"></div><div class="phase-dot active">BOLICHE</div><div class="phase-line"></div><div class="phase-dot">AFTER</div></div>
+      <div class="desktop-layout">
+        <main class="dm-stack">
+          <div class="dm-card">
+            <div class="topbar" style="margin-bottom:10px"><div><div class="eyebrow">SITUACIÓN ACTUAL · #08</div><h2 style="margin:3px 0">Shot de regalo sospechoso</h2></div><span style="color:#27e2d2;font-weight:1000;font-size:12px">02:17 → 02:32</span></div>
+            <p style="color:#c8c6cc;line-height:1.5;margin-bottom:14px">Quien lo toma: <b>+1 NA</b>, tira 1d6. <b>1–2:</b> penalización. <b>5–6:</b> buff inesperado. El DM decide quién lo toma y narra la escena.</p>
+            <button class="next-situation">⚡ Siguiente situación · 02:32 →</button>
+            <div class="small">Lanza el próximo evento, avanza la hora ficticia y actualiza la situación para el grupo.</div>
+          </div>
+          <div class="dm-card"><div class="topbar"><div><div class="eyebrow">JUGADORES · 6</div><h3>Estado de la mesa</h3></div><div class="eyebrow">NA EN VIVO</div></div>
+            <div class="player-grid">
+              <div class="player chaos"><div class="player-head"><div><div class="player-name">Facu</div><div class="player-char">El Intenso</div></div><div class="na-pill">NA 3</div></div><div class="prenda-mini">⚠ Responder Cantando</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+              <div class="player"><div class="player-head"><div><div class="player-name">Martín</div><div class="player-char">El Suertudo</div></div><div class="na-pill">NA 2</div></div><div class="prenda-mini">Sin prenda</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+              <div class="player chaos"><div class="player-head"><div><div class="player-name">Juli</div><div class="player-char">El Payaso</div></div><div class="na-pill">NA 4</div></div><div class="prenda-mini">⚠ Eco Insoportable</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+              <div class="player"><div class="player-head"><div><div class="player-name">Lean</div><div class="player-char">El Gym Bro</div></div><div class="na-pill">NA 1</div></div><div class="prenda-mini">Sin prenda</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+              <div class="player chaos"><div class="player-head"><div><div class="player-name">Sofi</div><div class="player-char">El Tímido</div></div><div class="na-pill">NA 3</div></div><div class="prenda-mini">⚠ Modo Noticiero</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+              <div class="player"><div class="player-head"><div><div class="player-name">Tomy</div><div class="player-char">El Fachero</div></div><div class="na-pill">NA 2</div></div><div class="prenda-mini">Sin prenda</div><div class="player-controls"><button>−1</button><button>+1</button><button>Prenda</button></div></div>
+            </div>
+          </div>
+        </main>
+        <aside class="dm-stack">
+          <div class="dm-card"><div class="eyebrow">PRÓXIMOS EVENTOS · BOLICHE</div><div class="event-list" style="margin-top:9px">
+            <div class="event current"><b>08 · Shot de regalo sospechoso</b><p>+1 NA · 1d6 · buff/penalización</p></div>
+            <div class="event"><b>09 · Empujón fuerte</b><p>Dos jugadores tiran Carisma o Aguante.</p></div>
+            <div class="event"><b>10 · Alguien los graba</b><p>Actuar normal, exagerar o esconderse.</p></div>
+          </div></div>
+          <div class="dm-card"><div class="eyebrow">PRENDA</div><h3>Asignar a jugador</h3><div class="small">Random o elegir de la lista.</div><button class="action" style="margin-top:10px">🎲 Repartir prenda random</button><button class="action secondary" style="margin-top:8px">Elegir prenda</button></div>
+          <div class="dm-card"><div class="eyebrow">NARRADOR IA · OLLAMA</div><textarea class="narrate" placeholder="Ej: Facu falló Carisma y Juli está a NA 4..."></textarea><button class="action" style="margin-top:8px">🪄 Narrar con IA</button><div class="ia-result">El shot baja como una mala decisión anunciada. Facu lo mira, mira al grupo y, por alguna razón, decide que este es exactamente el momento de demostrar que tiene razón.</div></div>
+          <div class="dm-card"><div class="eyebrow">HISTORIAL</div><div class="history"><div class="log"><strong>02:17</strong> · Facu tiró Carisma → 7 · éxito bonus</div><div class="log"><strong>02:11</strong> · Sofi +1 NA → Modo Caos</div><div class="log"><strong>01:58</strong> · Juli recibió “Eco Insoportable”</div></div></div>
+        </aside>
+      </div>
+    </div></div>
+  </section>
+</div>
+<script>
+const buttons=document.querySelectorAll('.demo-nav button'),views=document.querySelectorAll('.view');
+buttons.forEach(b=>b.addEventListener('click',()=>{buttons.forEach(x=>x.classList.remove('active'));views.forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.view).classList.add('active')}));
+document.querySelector('.next-situation').addEventListener('click',e=>{
+  e.currentTarget.textContent='✓ Situación avanzada · 02:32';
+  e.currentTarget.style.background='linear-gradient(90deg,#27e2d2,#9d42ff)';
+  setTimeout(()=>{e.currentTarget.textContent='⚡ Siguiente situación · 02:47 →';e.currentTarget.style.background='linear-gradient(90deg,#ff3e9d,#9d42ff)'},900);
+});
+</script>
+</body>
+</html>

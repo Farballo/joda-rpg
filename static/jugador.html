@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Joda RPG — Jugador</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1>Joda RPG</h1>
+
+  <form id="form-join">
+    <label for="input-nombre">Tu nombre</label>
+    <input type="text" id="input-nombre" required>
+
+    <h2>Elegí tu personaje</h2>
+    <div id="personajes">Cargando personajes...</div>
+
+    <p id="error-join" class="error"></p>
+    <button type="submit">Unirme a la partida</button>
+  </form>
+
+  <div id="pantalla-espera" class="oculto">
+    <p>Estás en la partida, <strong id="nombre-confirmado"></strong>.</p>
+
+    <h2>Nivel de Alcohol</h2>
+    <div class="na-meter"><div class="na-fill" id="na-fill"></div></div>
+    <p id="na-label"></p>
+
+    <h2>Tirar dado</h2>
+    <div id="stats"></div>
+
+    <div id="resultado-tirada" class="oculto">
+      <p id="resultado-texto"></p>
+    </div>
+  </div>
+
+  <script src="/static/jugador.js"></script>
+</body>
+</html>

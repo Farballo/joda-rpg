@@ -1,0 +1,20 @@
+[
+  { "id": 1,  "nombre": "Eco Insoportable", "efecto": "Todo lo que digas tenés que decirlo dos veces seguidas, sin excepción. Si te olvidás: +1 NA inmediato." },
+  { "id": 2,  "nombre": "Acento Italiano Dramático", "efecto": "Tenés que hablar con acento italiano exagerado y gesticular cada frase. Frases sin gesto no cuentan." },
+  { "id": 3,  "nombre": "Modo Alemán", "efecto": "Hablás en tono serio, cortante y estructurado. Máximo una frase por intervención." },
+  { "id": 4,  "nombre": "Boca Abierta", "efecto": "Tenés que hablar con la boca abierta de forma incómoda. Si alguien se ríe, seguís igual." },
+  { "id": 5,  "nombre": "Susurrador Sospechoso", "efecto": "Solo podés hablar en voz baja. Si no te escuchan, es tu problema." },
+  { "id": 6,  "nombre": "Mirada Cruzada", "efecto": "Cada vez que le hablás a una persona, tenés que mirar fijamente a otra distinta." },
+  { "id": 7,  "nombre": "Movimiento Constante", "efecto": "No podés quedarte quieto mientras hablás: tenés que moverte o gesticular exageradamente." },
+  { "id": 8,  "nombre": "Responder Cantando", "efecto": "Al menos una frase de cada respuesta tiene que ser cantada." },
+  { "id": 9,  "nombre": "Modo Noticiero", "efecto": "Todo lo que digas tiene que ser en tono serio de noticiero." },
+  { "id": 10, "nombre": "Palabra Prohibida", "efecto": "El grupo elige una palabra común que no podés decir. Si la decís: +1 NA inmediato." },
+  { "id": 11, "nombre": "Pie en la Mesa", "efecto": "Tenés que tener un pie apoyado en la mesa cada vez que hablás. Si lo bajás: +1 NA." },
+  { "id": 12, "nombre": "Manos Ocupadas", "efecto": "Tenés que mantener ambas manos ocupadas todo el tiempo, no podés soltarlas al hablar." },
+  { "id": 13, "nombre": "Señalar Siempre", "efecto": "Cada vez que hablás, tenés que señalar algo o a alguien con el dedo." },
+  { "id": 14, "nombre": "Pase de Prendas", "efecto": "En cualquier momento podés intercambiar tu prenda activa con la de otro jugador. Al hacerlo, robás una nueva prenda y la cumplís también." },
+  { "id": 15, "nombre": "Sí a Todo", "efecto": "No podés decir 'no' ni negarte verbalmente. El DM o el grupo corta si se va al carajo." },
+  { "id": 16, "nombre": "Frase Obligatoria", "efecto": "Antes de cada intervención tenés que decir una frase fija elegida por el grupo." },
+  { "id": 17, "nombre": "Responder en Tercera Persona", "efecto": "Tenés que hablar de vos mismo en tercera persona." },
+  { "id": 18, "nombre": "Aplauso Obligatorio", "efecto": "Después de cada intervención tuya, aplaudís una vez, sin explicación." }
+]

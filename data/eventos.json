@@ -1,0 +1,34 @@
+{
+  "previa": [
+    { "titulo": "¿Quién trae alcohol?", "texto": "Un jugador se ofrece (tira Astucia o Suerte) o hay tirada grupal de Suerte. Éxito: hay alcohol suficiente. Fallo: falta alcohol, alguien arranca con +1 NA de bronca o prenda." },
+    { "titulo": "Estado del depto", "texto": "Tirada de Astucia o Presencia. Éxito: +1 a la primera tirada social del boliche. Fallo: quilombo (falta hielo, baño inutilizable), prenda física temprana." },
+    { "titulo": "Las minas, ¿llegan?", "texto": "Tirada de Carisma o Suerte. Éxito: llegan, sube el clima, +1 NA para todos. Fallo: no llegan, alguien toma de más." },
+    { "titulo": "Primer papelón", "texto": "El jugador más pasado tira Carisma. Éxito: anécdota graciosa. Fallo: prenda inmediata. 1 natural: papelón legendario." },
+    { "titulo": "Decidir cuándo salir", "texto": "Tirada grupal de Astucia. Éxito: salen en el momento justo. Fallo: salen tarde, temprano, o alguien se queda atrás." }
+  ],
+  "boliche": [
+    { "titulo": "Patova con ganas de romper las bolas", "texto": "Un jugador tira Carisma. Éxito: pasa. Fallo: -1 Carisma toda la noche." },
+    { "titulo": "DNI dudoso", "texto": "Tirada de Suerte. Éxito: zafa. Fallo: prenda inmediata o espera afuera." },
+    { "titulo": "Tragos carísimos", "texto": "El grupo elige: pagar (nada) o ratonear (-1 Carisma colectivo)." },
+    { "titulo": "Shot de regalo sospechoso", "texto": "Quien lo toma: +1 NA, tira 1d6. 1-2: penalización. 5-6: buff inesperado." },
+    { "titulo": "Empujón fuerte", "texto": "Dos jugadores tiran Carisma o Aguante. El que pierde: +1 NA o prenda." },
+    { "titulo": "Música de mierda", "texto": "Todos -1 Carisma. El Payaso puede anularlo automáticamente." },
+    { "titulo": "Alguien los graba", "texto": "Elegir: actuar normal (difícil), exagerar (riesgo alto) o esconderse (-1 Carisma)." },
+    { "titulo": "Baile horrible", "texto": "Si se rolea con confianza: +1 Carisma. Si no: -1 Carisma y +1 NA." },
+    { "titulo": "Se pierde un jugador", "texto": "Ese jugador juega solo 1 ronda. Si falla una tirada: +1 NA automático." },
+    { "titulo": "Alguien vomita", "texto": "Ese jugador entra en Modo Caos inmediato. Los cercanos tiran Suerte o reciben penalización social." },
+    { "titulo": "Momento épico", "texto": "Algo sale increíblemente bien. El grupo elige: buff colectivo, cancelar una prenda, o bajar NA a uno." },
+    { "titulo": "Caos total de boliche", "texto": "Todos +1 NA. Se activa una prenda random. El DM describe algo que va a traer consecuencias en el after." }
+  ],
+  "after": [
+    { "titulo": "Casa que no es de nadie", "texto": "Nadie sabe qué se puede tocar. -1 Astucia colectivo." },
+    { "titulo": "El dueño se despierta", "texto": "Elegir: chamuyar (Carisma) o huir (Suerte)." },
+    { "titulo": "Conversación profunda", "texto": "Dos jugadores pueden resolver rivalidades o quedar peor." },
+    { "titulo": "Confesión innecesaria", "texto": "Tirada de Astucia. Éxito: alivio. Fallo: cringe eterno." },
+    { "titulo": "Uno se duerme", "texto": "Queda fuera 1 ronda. Puede perder cosas." },
+    { "titulo": "Se rompe algo importante", "texto": "Consecuencia para el futuro (el DM anota)." },
+    { "titulo": "Discusión heavy", "texto": "Una relación se define para siempre." },
+    { "titulo": "Aparición inesperada", "texto": "Ex, vecino, policía o madre aparece de golpe." },
+    { "titulo": "Resaca anticipada", "texto": "-1 a todas las tiradas finales." }
+  ]
+}

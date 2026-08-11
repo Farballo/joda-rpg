@@ -1,0 +1,76 @@
+body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+.oculto {
+  display: none;
+}
+
+.personaje-card {
+  display: block;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.error {
+  color: #c0392b;
+}
+
+.btn-stat {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.na-meter {
+  height: 24px;
+  background: #292936;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.na-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #27e2d2, #9d42ff, #ff3e9d);
+  transition: width 0.3s ease;
+}
+
+.player-card {
+  list-style: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.player-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.na-label {
+  font-size: 0.85rem;
+  margin: 0.4rem 0;
+}
+
+.na-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.na-controls button {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+#lista-jugadores {
+  list-style: none;
+  padding: 0;
+}

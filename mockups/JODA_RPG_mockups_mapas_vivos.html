@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JODA RPG — Mapas vivos</title>
+<style>
+:root{--bg:#06060a;--panel:#101019;--panel2:#151522;--line:#2d2d3d;--text:#f8f7f5;--muted:#92909a;--pink:#ff3e9d;--cyan:#27e2d2;--violet:#9d42ff;--yellow:#ffd84a;--red:#ff466f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;background-image:radial-gradient(#fff .7px,transparent .7px);background-size:5px 5px}
+.shell{max-width:1500px;margin:auto;padding:22px}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.nav button{background:#11111a;border:1px solid var(--line);color:#aaa;padding:11px 14px;border-radius:10px;font-weight:1000;cursor:pointer}.nav button.active{color:#fff;border-color:var(--pink);box-shadow:0 0 20px #ff3e9d22}
+.view{display:none}.view.active{display:block}.label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#777;font-weight:1000;margin-bottom:8px}
+.phone{width:min(100%,430px);margin:auto;border:6px solid #1a1a21;border-radius:34px;overflow:hidden;background:#090912;box-shadow:0 30px 100px #000b}.phonein{min-height:850px;padding:17px;background:radial-gradient(circle at 80% 0,#291044 0,transparent 35%),#090912}
+.desktop{border:7px solid #18181f;border-radius:18px;overflow:hidden;background:#090912;box-shadow:0 30px 100px #000b}.desktopin{min-height:760px;padding:20px;background:radial-gradient(circle at 80% 0,#25103b 0,transparent 33%),#090912}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}.logo{font-size:22px;font-weight:1000;letter-spacing:-.06em}.sub{font-size:9px;color:#777;text-transform:uppercase;letter-spacing:.15em;font-weight:1000}.hour{font-size:20px;font-weight:1000}.phase{background:var(--cyan);color:#06100f;border-radius:99px;padding:7px 10px;font-size:10px;font-weight:1000}
+.card{background:#11111b;border:1px solid var(--line);border-radius:17px;padding:14px}.card+.card{margin-top:10px}.eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#83808c;font-weight:1000}
+.mapbox{position:relative;overflow:hidden;border:1px solid #343443;border-radius:20px;background:#11101a;min-height:520px}
+.mapbox.department{background:radial-gradient(circle at 50% 30%,#3b1b45 0,transparent 36%),linear-gradient(135deg,#15121c,#0c1017)}
+.mapbox.club{background:radial-gradient(circle at 52% 48%,#45154d 0,transparent 35%),linear-gradient(135deg,#0c1119,#170d1b)}
+.room{position:absolute;border:1px solid #4a4054;background:#181522dd;box-shadow:inset 0 0 35px #0005}.room b{font-size:9px;color:#777;text-transform:uppercase;letter-spacing:.1em}.room span{font-size:20px}
+.dept-living{left:7%;top:8%;width:86%;height:39%;padding:15px}.dept-kitchen{left:7%;top:50%;width:42%;height:25%;padding:12px}.dept-bath{right:7%;top:50%;width:37%;height:25%;padding:12px}.dept-balcony{left:7%;bottom:7%;width:86%;height:13%;padding:10px}
+.club-dance{left:23%;top:19%;width:54%;height:48%;padding:15px;text-align:center}.club-bar{left:6%;top:28%;width:14%;height:31%;padding:9px;writing-mode:vertical-rl}.club-vip{right:6%;top:10%;width:17%;height:22%;padding:9px}.club-bath{right:6%;bottom:12%;width:17%;height:25%;padding:9px}.club-entry{left:37%;bottom:3%;width:26%;height:9%;padding:7px;text-align:center}
+.token{position:absolute;transform:translate(-50%,-50%);z-index:5;cursor:pointer}.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--cyan);background:#12151d;box-shadow:0 0 20px #27e2d266;font-size:20px}.token.player .avatar{border-color:var(--cyan);box-shadow:0 0 22px #27e2d266}.token.npc .avatar{border-color:#ddd;box-shadow:0 0 16px #fff2}.token.important .avatar{border-color:var(--pink);box-shadow:0 0 25px #ff3e9d66}.token.unknown .avatar{border-color:#8d8299;color:#999}
+.token-label{margin-top:4px;background:#0b0b10eF;border:1px solid #333342;border-radius:7px;padding:3px 6px;white-space:nowrap;font-size:9px;font-weight:1000;text-align:center}.token-label.cyan{color:var(--cyan)}.token-label.pink{color:#ff75bc}
+.you{left:50%;top:38%}.friend1{left:36%;top:30%}.friend2{left:64%;top:43%}.npc1{left:76%;top:31%}.npc2{left:24%;top:61%}.unknown{left:82%;top:68%}
+.club-you{left:51%;top:53%}.club-friend1{left:40%;top:43%}.club-friend2{left:64%;top:58%}.club-npc1{left:15%;top:43%}.club-npc2{left:84%;top:49%}.club-unknown{left:78%;top:76%}
+.playercard{position:absolute;z-index:10;left:12px;right:12px;bottom:12px;border:1px solid #633055;background:linear-gradient(135deg,#21101e,#121019);border-radius:16px;padding:13px;box-shadow:0 20px 40px #000b}.playercard h3{margin:3px 0 5px;font-size:21px}.playercard p{margin:0;color:#bbb;font-size:12px;line-height:1.35}.cardrow{display:flex;gap:7px;margin-top:10px}.mini-btn{flex:1;border:1px solid #343444;background:#181822;color:#fff;border-radius:9px;padding:9px;font-weight:1000}
+.map-legend{position:absolute;top:10px;right:10px;z-index:8;background:#0a0a10dc;border:1px solid #30303e;border-radius:10px;padding:8px;font-size:8px;color:#888}.map-legend div{margin:3px 0}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.c{background:var(--cyan)}.p{background:var(--pink)}.w{background:#ddd}.u{background:#777}
+.mobile-map-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.action{border:0;border-radius:13px;background:var(--pink);color:#170711;padding:15px;font-weight:1000;font-size:15px}.action.secondary{background:#181821;border:1px solid #353545;color:#fff}
+.notice{margin-top:10px;border-left:4px solid var(--cyan);padding:11px;background:#11111b;border-radius:10px}.notice b{font-size:12px}.notice p{margin:4px 0 0;color:#aaa;font-size:11px;line-height:1.35}
+.dmgrid{display:grid;grid-template-columns:1.45fr .75fr;gap:14px}.dmmap{min-height:590px}.side{display:flex;flex-direction:column;gap:10px}.side .card{margin:0}.next{width:100%;border:0;border-radius:13px;background:linear-gradient(90deg,var(--pink),var(--violet));color:#fff;padding:17px;font-size:17px;font-weight:1000}.event{background:#19111f;border:1px solid #66355e;border-radius:12px;padding:12px}.event b{display:block;margin-bottom:5px}.event p{margin:0;color:#aaa;font-size:12px;line-height:1.4}.deck{display:grid;grid-template-columns:1fr 1fr;gap:7px}.npc-card{border:1px solid #30303e;background:#15151e;border-radius:11px;padding:9px}.npc-card b{font-size:11px}.npc-card span{display:block;font-size:9px;color:#888;margin-top:3px}
+@media(max-width:1000px){.dmgrid{grid-template-columns:1fr}.dmmap{min-height:620px}}@media(max-width:600px){.shell{padding:12px}.nav button{flex:1}.mapbox{min-height:520px}.club-dance{left:20%;width:60%}}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="nav">
+<button class="active" data-v="pre">Mapa · Previa</button>
+<button data-v="club">Mapa · Boliche</button>
+<button data-v="mobile">Jugador · Mapa</button>
+<button data-v="dm">DM · Mapa maestro</button>
+</div>
+
+<section id="pre" class="view active">
+<div class="label">Mapa temático · previa</div>
+<div class="phone"><div class="phonein">
+<div class="top"><div><div class="logo">JODA RPG</div><div class="sub">MAPA DE LA NOCHE</div></div><div><div class="hour">00:48</div><div class="sub">PREVIA</div></div></div>
+<div class="card" style="margin-bottom:10px"><div class="eyebrow">Departamento · situación #03</div><div style="font-size:22px;font-weight:1000;margin-top:3px">¿Quién trajo hielo?</div><div style="font-size:11px;color:#999;margin-top:4px">Explorá el lugar. Algunas personas todavía son desconocidas.</div></div>
+<div class="mapbox department">
+<div class="map-legend"><div><i class="dot c"></i>Jugadores</div><div><i class="dot w"></i>NPC</div><div><i class="dot u"></i>Desconocido</div></div>
+<div class="room dept-living"><b>Living</b><br><span>🛋️</span></div>
+<div class="room dept-kitchen"><b>Cocina</b><br><span>🍕 🍺</span></div>
+<div class="room dept-bath"><b>Baño</b><br><span>🚪</span></div>
+<div class="room dept-balcony"><b>Balcón ·</b> <span>🌙</span></div>
+<div class="token player you"><div class="avatar">🧑</div><div class="token-label cyan">FACU · VOS</div></div>
+<div class="token player friend1"><div class="avatar">👨</div><div class="token-label cyan">MARTÍN</div></div>
+<div class="token player friend2"><div class="avatar">👩</div><div class="token-label cyan">SOFI</div></div>
+<div class="token npc npc1"><div class="avatar">🧔</div><div class="token-label">EL BARTENDER</div></div>
+<div class="token npc important npc2"><div class="avatar">🕶️</div><div class="token-label pink">LA VECINA</div></div>
+<div class="token unknown unknown"><div class="avatar">?</div><div class="token-label">DESCONOCIDO</div></div>
+</div>
+<div class="notice"><b>⚡ NUEVO PERSONAJE CERCA</b><p>Alguien acaba de entrar al balcón. Todavía no sabés quién es.</p></div>
+<div class="mobile-map-actions"><button class="action">Ver personaje</button><button class="action secondary">Volver a partida</button></div>
+</div></div>
+</section>
+
+<section id="club" class="view">
+<div class="label">Mapa temático · boliche</div>
+<div class="phone"><div class="phonein">
+<div class="top"><div><div class="logo">JODA RPG</div><div class="sub">MAPA DE LA NOCHE</div></div><div><div class="hour">02:43</div><div class="phase">BOLICHE</div></div></div>
+<div class="card" style="margin-bottom:10px"><div class="eyebrow">Situación #09</div><div style="font-size:22px;font-weight:1000;margin-top:3px">El desconocido de la barra</div></div>
+<div class="mapbox club">
+<div class="map-legend"><div><i class="dot c"></i>Tu grupo</div><div><i class="dot p"></i>Importante</div><div><i class="dot w"></i>NPC</div></div>
+<div class="room club-dance"><b>🪩 Pista</b><br><span style="font-size:38px">💃 🧑 🕺</span></div>
+<div class="room club-bar"><b>🍸 Barra</b></div>
+<div class="room club-vip"><b>⭐ VIP</b><br>🛋️</div>
+<div class="room club-bath"><b>🚻 Baños</b><br>❓</div>
+<div class="room club-entry"><b>Entrada</b></div>
+<div class="token player club-you"><div class="avatar">🧑</div><div class="token-label cyan">VOS</div></div>
+<div class="token player club-friend1"><div class="avatar">👨</div><div class="token-label cyan">JULI</div></div>
+<div class="token player club-friend2"><div class="avatar">👩</div><div class="token-label cyan">SOFI</div></div>
+<div class="token npc club-npc1"><div class="avatar">🍸</div><div class="token-label">BARTENDER</div></div>
+<div class="token npc important club-npc2"><div class="avatar">🕶️</div><div class="token-label pink">MARTINA</div></div>
+<div class="token unknown club-unknown"><div class="avatar">?</div><div class="token-label">???</div></div>
+<div class="playercard"><div class="eyebrow">PERSONAJE DESCUBIERTO</div><h3>🕶️ Martina</h3><p>Está sola en la barra. Te mira, levanta su vaso y señala a tu grupo.</p><div class="cardrow"><button class="mini-btn">Ver perfil</button><button class="mini-btn">Cerrar</button></div></div>
+</div>
+</div></div>
+</section>
+
+<section id="mobile" class="view">
+<div class="label">/jugador · mapa secundario · versión móvil</div>
+<div class="phone"><div class="phonein">
+<div class="top"><div><div class="logo">JODA RPG</div><div class="sub">LO QUE CONOCÉS</div></div><div><div class="hour">02:43</div><div class="phase">BOLICHE</div></div></div>
+<div class="notice" style="margin:0 0 10px"><b>👀 Algo cambió</b><p>Hay alguien nuevo en la barra. El DM todavía no reveló quién es.</p></div>
+<div class="mapbox club" style="min-height:585px">
+<div class="room club-dance"><b>🪩 Pista</b><br><span style="font-size:32px">💃 🧑</span></div>
+<div class="room club-bar"><b>🍸 Barra</b></div>
+<div class="room club-vip"><b>⭐ VIP</b></div>
+<div class="room club-bath"><b>🚻</b></div>
+<div class="room club-entry"><b>Entrada</b></div>
+<div class="token player club-you"><div class="avatar">🧑</div><div class="token-label cyan">VOS</div></div>
+<div class="token player club-friend1"><div class="avatar">👨</div><div class="token-label cyan">JULI</div></div>
+<div class="token npc club-npc1"><div class="avatar">🍸</div><div class="token-label">BARTENDER</div></div>
+<div class="token unknown club-unknown"><div class="avatar">?</div><div class="token-label">ALGUIEN</div></div>
+</div>
+<div class="card" style="margin-top:10px"><div class="eyebrow">Cerca tuyo</div><div class="deck" style="margin-top:8px"><div class="npc-card"><b>🍸 Bartender</b><span>NPC conocido</span></div><div class="npc-card"><b>❓ Alguien</b><span>Sin identificar</span></div></div></div>
+<div class="mobile-map-actions"><button class="action">Ver alguien</button><button class="action secondary">← Partida</button></div>
+</div></div>
+</section>
+
+<section id="dm" class="view">
+<div class="label">/dm · mapa maestro</div>
+<div class="desktop"><div class="desktopin">
+<div class="top"><div><div class="sub">DUNGEON MASTER · MAPA MAESTRO</div><div class="logo" style="font-size:30px">JODA RPG</div></div><div style="text-align:right"><div class="hour">02:43</div><div class="phase">BOLICHE</div></div></div>
+<div class="dmgrid">
+<div>
+<div class="mapbox club dmmap">
+<div class="map-legend"><div><i class="dot c"></i>Jugadores</div><div><i class="dot p"></i>NPC clave</div><div><i class="dot w"></i>NPC</div><div><i class="dot u"></i>Oculto</div></div>
+<div class="room club-dance"><b>🪩 PISTA</b><br><span style="font-size:42px">💃 🧑 🕺 👩</span></div>
+<div class="room club-bar"><b>🍸 BARRA</b></div><div class="room club-vip"><b>⭐ VIP</b><br>🛋️</div><div class="room club-bath"><b>🚻 BAÑOS</b><br>❓</div><div class="room club-entry"><b>ENTRADA</b></div>
+<div class="token player club-you"><div class="avatar">🧑</div><div class="token-label cyan">FACU · NA3</div></div>
+<div class="token player club-friend1"><div class="avatar">👨</div><div class="token-label cyan">JULI · NA4</div></div>
+<div class="token player club-friend2"><div class="avatar">👩</div><div class="token-label cyan">SOFI · NA3</div></div>
+<div class="token npc club-npc1"><div class="avatar">🍸</div><div class="token-label">BARTENDER</div></div>
+<div class="token npc important club-npc2"><div class="avatar">🕶️</div><div class="token-label pink">MARTINA · EVENTO</div></div>
+<div class="token npc" style="left:86%;top:78%"><div class="avatar">🧑</div><div class="token-label">DESCONOCIDO</div></div>
+<div class="token unknown" style="left:18%;top:78%"><div class="avatar">?</div><div class="token-label">OCULTO</div></div>
+</div>
+</div>
+<div class="side">
+<div class="card"><div class="eyebrow">SITUACIÓN #09 · ACTIVA</div><h3>El desconocido de la barra</h3><div class="event"><b>Narración</b><p>“Desde la barra, un tipo que ninguno recuerda haber visto antes levanta su vaso y los señala.”</p></div><button class="next" style="margin-top:10px">⚡ Siguiente situación · 02:58 →</button></div>
+<div class="card"><div class="eyebrow">NPCs · 6 EN ESCENA</div><div class="deck" style="margin-top:8px"><div class="npc-card"><b>🕶️ Martina</b><span>Evento actual · Barra</span></div><div class="npc-card"><b>🍸 Bartender</b><span>NPC · Barra</span></div><div class="npc-card"><b>🧑 Desconocido</b><span>Oculto para jugadores</span></div><div class="npc-card"><b>👩 Grupo rival</b><span>VIP · Inactivo</span></div></div></div>
+<div class="card"><div class="eyebrow">ACCIONES DEL DM</div><div class="mobile-map-actions"><button class="action">+ NPC</button><button class="action secondary">Mover</button><button class="action secondary">Revelar</button><button class="action secondary">Evento</button></div></div>
+<div class="card"><div class="eyebrow">NARRAR CON IA</div><textarea style="width:100%;min-height:65px;background:#09090e;border:1px solid #30303e;border-radius:10px;color:#fff;padding:10px" placeholder="Qué acaba de pasar..."></textarea><button class="action" style="width:100%;margin-top:7px">🪄 Generar narración</button></div>
+</div>
+</div>
+</div></div>
+</section>
+</div>
+<script>
+const bs=document.querySelectorAll('.nav button'),vs=document.querySelectorAll('.view');
+bs.forEach(b=>b.onclick=()=>{bs.forEach(x=>x.classList.remove('active'));vs.forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.v).classList.add('active')});
+</script>
+</body>
+</html>

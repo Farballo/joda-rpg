@@ -1,0 +1,104 @@
+[
+  {
+    "id": "intenso",
+    "nombre": "El Intenso",
+    "frase": "Si no pasa algo ahora, no pasa nunca.",
+    "stats": { "carisma": 2, "aguante": 0, "astucia": -2, "presencia": 4, "suerte": -2 },
+    "habilidad_unica": {
+      "nombre": "Vamos todos",
+      "usos": "1 vez por fase",
+      "efecto": "Antes de una tirada grupal, obliga a que todos tiren. Si al menos uno saca 6, éxito total grupal. Si nadie saca 6, la consecuencia negativa es colectiva y aumentada."
+    },
+    "modo_caos": {
+      "nombre": "AHORA O NUNCA",
+      "efecto": "Una vez por escena, puede forzar una acción extrema sin tirar dados (encarar, gritar, subirse a algo, confrontar a alguien).",
+      "consecuencia": "El DM elige una consecuencia grave: expulsión, pelea, ruptura social o cambio forzado de fase."
+    },
+    "debilidad": "No puede ignorar provocaciones. Si alguien lo desafía públicamente, debe reaccionar aunque pierda."
+  },
+  {
+    "id": "suertudo",
+    "nombre": "El Suertudo",
+    "frase": "No sé cómo pasó, pero salió.",
+    "stats": { "carisma": 0, "aguante": -2, "astucia": 0, "presencia": -2, "suerte": 4 },
+    "habilidad_unica": {
+      "nombre": "Justo zafó",
+      "usos": "1 vez por fase",
+      "efecto": "Cuando fallás una tirada, tirá 1D6. Con 4-6, el fallo se transforma en éxito raro, fallo sin consecuencias, o problema para otro jugador."
+    },
+    "modo_caos": {
+      "nombre": "Modo Dios",
+      "efecto": "Todas las tiradas cuentan con +2 de suerte adicional. Podés convertir 1 fallo por fase en éxito total.",
+      "consecuencia": "Al final de la fase, tirá 1D6. Con 1-2, el karma se guarda: penalizador narrativo acumulado para la próxima fase."
+    },
+    "debilidad": "Si algo depende de planificación tiene -1 a la tirada. Subestima el peligro porque 'siempre zafa'."
+  },
+  {
+    "id": "payaso",
+    "nombre": "El Payaso",
+    "frase": "Pará, pará... mirá esto.",
+    "stats": { "carisma": 2, "aguante": 0, "astucia": 2, "presencia": -2, "suerte": 0 },
+    "habilidad_unica": {
+      "nombre": "Hago un show",
+      "usos": "1 vez por fase",
+      "efecto": "Podés reemplazar cualquier stat por Carisma en una tirada si describís cómo convertís la situación en un espectáculo. Riesgo: si fallás, el papelón es doble."
+    },
+    "modo_caos": {
+      "nombre": "Caos Puro",
+      "efecto": "Cada vez que fallás una tirada, podés repetirla. Si tiene éxito, arrastra a otro jugador a la escena.",
+      "consecuencia": "Cada repetición: Alcohol +1. Nunca es solo: siempre involucra a alguien más."
+    },
+    "debilidad": "Si hay silencio incómodo, tiene que intervenir. Le cuesta no exagerar incluso cuando no conviene."
+  },
+  {
+    "id": "gymbro",
+    "nombre": "El Gym Bro",
+    "frase": "Tranqui, yo me la banco.",
+    "stats": { "carisma": -2, "aguante": 4, "astucia": -2, "presencia": 2, "suerte": 0 },
+    "habilidad_unica": {
+      "nombre": "Banco todo",
+      "usos": "1 vez por noche",
+      "efecto": "Ignorás la primera consecuencia física que sufras en la noche (empujón, caída, cansancio extremo, penalización de aguante)."
+    },
+    "modo_caos": {
+      "nombre": "Animal",
+      "efecto": "Aguante pasa a +3. Ignora dolor, empujones y cansancio.",
+      "consecuencia": "Todas las tiradas de Astucia fallan automáticamente. Tiende a resolver todo con el cuerpo."
+    },
+    "debilidad": "Si alguien lo desafía físicamente tiene que aceptar o escalar. Le cuesta leer indirectas y límites sociales."
+  },
+  {
+    "id": "timido",
+    "nombre": "El Tímido",
+    "frase": "Yo estoy bien acá... creo.",
+    "stats": { "carisma": -2, "aguante": 2, "astucia": 4, "presencia": -2, "suerte": 0 },
+    "habilidad_unica": {
+      "nombre": "Observador Silencioso",
+      "usos": "1 vez por noche",
+      "efecto": "Antes de una tirada social (Carisma o Presencia), elegís: +2 a la tirada, o repetir el dado."
+    },
+    "modo_caos": {
+      "nombre": "Me solté",
+      "efecto": "Carisma pasa de -1 a +1. Puede iniciar interacciones sociales sin penalización.",
+      "consecuencia": "Después de cada interacción social, tirá 1D6. Con 1-3, se arrepiente (pierde Presencia hasta la próxima escena). Con 4-6, se entusiasma (Alcohol +1)."
+    },
+    "debilidad": "Si hay mucha gente o atención encima, tiene -1 de Presencia. Evita liderar situaciones, incluso cuando tiene razón."
+  },
+  {
+    "id": "fachero",
+    "nombre": "El Fachero",
+    "frase": "No hace nada extraordinario... pero todo le queda bien.",
+    "stats": { "carisma": 4, "aguante": 0, "astucia": 0, "presencia": 2, "suerte": -2 },
+    "habilidad_unica": {
+      "nombre": "Cara de Boliche",
+      "usos": "1 vez por noche",
+      "efecto": "Cuando fallás una tirada de Carisma, podés convertirla en éxito parcial. El DM elige la consecuencia: sale pero cuesta algo, sale pero genera celos, o sale pero quedás expuesto."
+    },
+    "modo_caos": {
+      "nombre": "Invencible",
+      "efecto": "Todos los fallos de Carisma se repiten automáticamente.",
+      "consecuencia": "Si vuelve a fallar: se genera una rivalidad inmediata, o aparece un quilombo por ego."
+    },
+    "debilidad": "Si alguien lo supera en público, tiene -1 a la siguiente tirada social. Le cuesta aceptar el rechazo o la indiferencia."
+  }
+]
