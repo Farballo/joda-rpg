@@ -26,7 +26,6 @@ const NOMBRES_FASE = { previa: "Previa", boliche: "Boliche", after: "After", ter
 
 let ws = null;
 let prendas = [];
-let mapa = {};
 let npcs = [];
 let personajeActual = null;
 
@@ -38,11 +37,6 @@ async function cargarPersonajes() {
 async function cargarPrendas() {
   const res = await fetch("/data/prendas.json");
   prendas = await res.json();
-}
-
-async function cargarMapa() {
-  const res = await fetch("/data/mapa.json");
-  mapa = await res.json();
 }
 
 async function cargarNpcs() {
@@ -95,17 +89,18 @@ function renderStats(personaje) {
   });
 }
 
-function tirarDado(stat) {
+function tirarDado(stat, contexto) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ type: "tirar_dado", stat }));
+  ws.send(JSON.stringify({ type: "tirar_dado", stat, contexto: contexto || null }));
 }
 
 function mostrarResultado(msg) {
   const cont = document.getElementById("resultado-tirada");
   const texto = document.getElementById("resultado-texto");
   const extra = TEXTO_TIPO[msg.tipo] || "";
+  const prefijo = msg.contexto ? `${msg.contexto} — ` : "";
   texto.innerHTML = `
-    ${NOMBRES_STAT[msg.stat]}: sacaste ${msg.dados_tirados[0]} + ${msg.dados_tirados[1]} → total ${msg.total}
+    ${prefijo}${NOMBRES_STAT[msg.stat]}: sacaste ${msg.dados_tirados[0]} + ${msg.dados_tirados[1]} → total ${msg.total}
     ${extra ? `<br>${extra}` : ""}
   `;
   cont.classList.remove("oculto");
@@ -133,6 +128,35 @@ function renderModoCaos(activo) {
     <p>${mc.efecto}</p>
     <p class="consecuencia"><strong>Consecuencia:</strong> ${mc.consecuencia}</p>
   `;
+}
+
+function renderSituacion(situacion) {
+  const cont = document.getElementById("situacion-actual");
+
+  if (!situacion) {
+    cont.classList.add("oculto");
+    return;
+  }
+
+  cont.classList.remove("oculto");
+  document.getElementById("situacion-titulo").textContent = situacion.titulo;
+  document.getElementById("situacion-texto").textContent = situacion.texto;
+
+  const opcionesCont = document.getElementById("situacion-opciones");
+  if (situacion.opciones && situacion.opciones.length) {
+    opcionesCont.innerHTML = situacion.opciones
+      .map(
+        (op, i) =>
+          `<button type="button" class="btn-stat btn-opcion-situacion" data-stat="${op.stat}" data-idx="${i}">${op.texto} (${NOMBRES_STAT[op.stat]})</button>`
+      )
+      .join("");
+    opcionesCont.querySelectorAll(".btn-opcion-situacion").forEach((btn) => {
+      const opcion = situacion.opciones[Number(btn.dataset.idx)];
+      btn.addEventListener("click", () => tirarDado(opcion.stat, opcion.texto));
+    });
+  } else {
+    opcionesCont.innerHTML = "";
+  }
 }
 
 function resolverPrenda(prendaId) {
@@ -165,18 +189,18 @@ function renderPrendas(prendaIds) {
   });
 }
 
-function renderMapaJugador(fase, jugadoresEnMapa, npcsRevelados, miPlayerId) {
-  document.getElementById("mapa-fase-nombre").textContent = NOMBRES_FASE[fase] || fase;
+function renderMapaJugador(mapaActual, jugadoresEnMapa, npcsRevelados, miPlayerId) {
+  document.getElementById("mapa-fase-nombre").textContent = mapaActual.nombre || "";
 
   const cont = document.getElementById("mapa-zonas-jugador");
-  const zonasFase = mapa[fase] || [];
+  const zonas = mapaActual.zonas || [];
 
-  if (!zonasFase.length) {
+  if (!zonas.length) {
     cont.innerHTML = "<p>Sin mapa para esta fase.</p>";
     return;
   }
 
-  cont.innerHTML = zonasFase
+  cont.innerHTML = zonas
     .map((z) => {
       const enZona = jugadoresEnMapa.filter((j) => j.zona_actual === z.id);
       const npcsEnZona = Object.entries(npcsRevelados).filter(([, info]) => info.zona === z.id);
@@ -203,16 +227,103 @@ function renderMapaJugador(fase, jugadoresEnMapa, npcsRevelados, miPlayerId) {
     .join("");
 }
 
+function intentarLevante(npcId) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "intentar_levante", npc_id: npcId }));
+}
+
+function intentarConfrontacion(npcId, stat) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "intentar_confrontacion", npc_id: npcId, stat }));
+}
+
+function renderAccionesNpc(npc) {
+  const lindura = document.getElementById("npc-card-lindura");
+  const acciones = document.getElementById("npc-card-actions");
+  lindura.innerHTML = "";
+
+  if (npc.tipo === "levante") {
+    lindura.innerHTML =
+      npc.puntaje_lindura === null || npc.puntaje_lindura === undefined
+        ? `<p class="lindura-misterio">❓ No se ve bien quién es...</p>`
+        : `<p class="lindura-valor">Atractivo: ${npc.puntaje_lindura} / 10</p>`;
+    acciones.innerHTML = `
+      <button type="button" id="btn-intentar-levante">Intentar chamuyo</button>
+      <button type="button" id="btn-npc-ignorar">Ignorar</button>`;
+    document.getElementById("btn-intentar-levante").addEventListener("click", () => intentarLevante(npc.id));
+    document.getElementById("btn-npc-ignorar").addEventListener("click", ocultarCartaNpc);
+  } else if (npc.tipo === "confrontacion") {
+    acciones.innerHTML =
+      npc.opciones.map((op, i) => `<button type="button" class="btn-opcion-confrontacion" data-idx="${i}">${op.texto}</button>`).join("") +
+      `<button type="button" id="btn-npc-ignorar">Ignorar</button>`;
+    acciones.querySelectorAll(".btn-opcion-confrontacion").forEach((btn) => {
+      const opcion = npc.opciones[Number(btn.dataset.idx)];
+      btn.addEventListener("click", () => intentarConfrontacion(npc.id, opcion.stat));
+    });
+    document.getElementById("btn-npc-ignorar").addEventListener("click", ocultarCartaNpc);
+  } else {
+    acciones.innerHTML = `
+      <button type="button" id="btn-npc-hablar">Hablar</button>
+      <button type="button" id="btn-npc-ignorar">Ignorar</button>`;
+    document.getElementById("btn-npc-hablar").addEventListener("click", ocultarCartaNpc);
+    document.getElementById("btn-npc-ignorar").addEventListener("click", ocultarCartaNpc);
+  }
+}
+
 function mostrarCartaNpc(npc) {
   document.getElementById("npc-card-avatar").textContent = npc.avatar;
   document.getElementById("npc-card-nombre").textContent = npc.nombre;
   document.getElementById("npc-card-apodo").textContent = npc.apodo;
   document.getElementById("npc-card-frase").textContent = `"${npc.frase_reveal}"`;
+  renderAccionesNpc(npc);
   document.getElementById("npc-card-overlay").classList.remove("oculto");
+}
+
+function mostrarResultadoLevante(msg) {
+  document.getElementById("npc-card-lindura").innerHTML = `<p class="lindura-valor">Atractivo real: ${msg.puntaje_lindura} / 10</p>`;
+  const texto = msg.exito ? "¡Le gustaste! 🎉" : "No hubo onda esta vez...";
+  document.getElementById("npc-card-actions").innerHTML = `
+    <p>${texto}<br>Sacaste ${msg.dados_tirados[0]} + ${msg.dados_tirados[1]}, total ${msg.total}.</p>
+    <button type="button" id="btn-cerrar-resultado">Cerrar</button>`;
+  document.getElementById("btn-cerrar-resultado").addEventListener("click", ocultarCartaNpc);
+}
+
+function mostrarResultadoConfrontacion(msg) {
+  document.getElementById("npc-card-actions").innerHTML = `
+    <p>Tirada de ${NOMBRES_STAT[msg.stat]}: ${msg.dados_tirados[0]} + ${msg.dados_tirados[1]}, total ${msg.total}.<br>El DM decide qué pasa.</p>
+    <button type="button" id="btn-cerrar-resultado">Cerrar</button>`;
+  document.getElementById("btn-cerrar-resultado").addEventListener("click", ocultarCartaNpc);
 }
 
 function ocultarCartaNpc() {
   document.getElementById("npc-card-overlay").classList.add("oculto");
+}
+
+function mostrarNarracion(texto) {
+  document.getElementById("narracion-ia-texto").textContent = texto;
+  document.getElementById("narracion-ia").classList.remove("oculto");
+}
+
+function limpiarSesionGuardada() {
+  localStorage.removeItem("player_id");
+  localStorage.removeItem("nombre");
+  localStorage.removeItem("personaje_id");
+}
+
+function reiniciarSesion(mensaje) {
+  limpiarSesionGuardada();
+  if (ws) {
+    ws.onclose = null;
+    ws.close();
+    ws = null;
+  }
+  if (mensaje) alert(mensaje);
+  location.reload();
+}
+
+function salirDePartida() {
+  if (!confirm("¿Salir de la partida?")) return;
+  reiniciarSesion(null);
 }
 
 function conectarWsJugador(playerId) {
@@ -228,15 +339,32 @@ function conectarWsJugador(playerId) {
       actualizarNa(msg.na);
       renderPrendas(msg.prendas);
       renderModoCaos(msg.modo_caos_activo);
+      renderSituacion(msg.situacion_actual);
       document.getElementById("fase-actual").textContent = NOMBRES_FASE[msg.fase] || msg.fase;
-      renderMapaJugador(msg.fase, msg.jugadores_en_mapa, msg.npcs_revelados, playerId);
+      renderMapaJugador(msg.mapa_actual, msg.jugadores_en_mapa, msg.npcs_revelados, playerId);
     }
     if (msg.type === "npc_revelado") {
       mostrarCartaNpc(msg.npc);
     }
+    if (msg.type === "resultado_levante") {
+      mostrarResultadoLevante(msg);
+    }
+    if (msg.type === "resultado_confrontacion") {
+      mostrarResultadoConfrontacion(msg);
+    }
+    if (msg.type === "narracion") {
+      mostrarNarracion(msg.texto);
+    }
+    if (msg.type === "partida_terminada") {
+      reiniciarSesion("El DM inició una partida nueva. Volvés a la pantalla de unirte.");
+    }
   };
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
+    if (event.code === 4404) {
+      reiniciarSesion("Tu partida anterior ya no existe. Unite de nuevo.");
+      return;
+    }
     setTimeout(() => conectarWsJugador(playerId), 2000);
   };
 }
@@ -250,7 +378,6 @@ async function mostrarPantallaJuego(nombre, personajeId) {
   personajeActual = personajes.find((p) => p.id === personajeId);
   renderStats(personajeActual);
   await cargarPrendas();
-  await cargarMapa();
   await cargarNpcs();
 }
 
@@ -263,8 +390,7 @@ async function mostrarPantallaJuego(nombre, personajeId) {
     document.getElementById("vista-mapa").classList.add("oculto");
   });
 
-  document.getElementById("btn-npc-hablar").addEventListener("click", ocultarCartaNpc);
-  document.getElementById("btn-npc-ignorar").addEventListener("click", ocultarCartaNpc);
+  document.getElementById("btn-salir-partida").addEventListener("click", salirDePartida);
 
   const playerIdGuardado = localStorage.getItem("player_id");
   const nombreGuardado = localStorage.getItem("nombre");

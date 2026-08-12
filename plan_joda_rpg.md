@@ -65,7 +65,9 @@ se agregó explícitamente a pedido, en una versión acotada.)*
 | IA narrativa | Ollama local, modelo chico, CPU-only. Es un extra decorativo — si Ollama falla, tarda o no está instalado, el DM narra normal y el juego sigue andando sin romperse |
 | Autenticación | Ninguna. Sala con código de 4 dígitos, como Kahoot/Jackbox |
 | Visibilidad del mapa | **Revelado global.** Cuando el DM revela un NPC, la carta aparece al mismo tiempo para todos los jugadores. No hay "fog of war" por jugador (cada celu viendo una versión distinta del mapa) — la propuesta original de los mockups lo sugiere, pero se descarta para el MVP porque multiplica la complejidad de estado y sincronización sin agregar tanto en una mesa de gente que juega en la misma sala físicamente |
-| Posicionamiento en el mapa | **Zonas fijas por fase**, no drag & drop libre. Cada fase define sus zonas en `data/mapa.json` (living, cocina, barra, VIP, etc.) con posición y tamaño fijados en CSS. El DM asigna un jugador o un NPC a una zona con un click/dropdown, no arrastrando tokens a coordenadas libres |
+| Posicionamiento en el mapa | **Zonas fijas por variante de mapa**, no drag & drop libre. Cada fase define una o más variantes de mapa en `data/mapa.json` (ej. distintos deptos/boliches), cada una con sus zonas (living, cocina, barra, VIP, etc.) y su posición/tamaño (`pos`, en % del contenedor). El DM asigna un jugador o un NPC a una zona con un click/dropdown, no arrastrando tokens a coordenadas libres |
+| Mapas configurables con nombre + posición | *(Revierte la fila anterior de esta tabla en versiones previas del plan, que ponía la posición en CSS.)* Cada fase puede tener **varias variantes de mapa** con nombre visible en pantalla (ej. "Depto de Cruza" vs "Depto de Banana"), para que la previa/el boliche no sean siempre el mismo lugar. La posición de cada zona (`pos: {left, top, width, height}`) se movió de `static/style.css` a `data/mapa.json` porque cada variante puede tener zonas distintas — hardcodear la posición por `id` de zona en CSS no escala a mapas configurables. Al entrar a una fase se elige una variante al azar; el DM puede forzar una variante puntual con el mensaje `cambiar_mapa` sin cambiar de fase — ver sección 5.6 y 7 |
+| Volver atrás de fase | El DM puede retroceder una fase (`retroceder_fase`, sección 7) además de avanzar. Comparte la misma lógica de "entrar a una fase" que avanzar (`avanzar_fase`): elige una nueva variante de mapa al azar, limpia la situación activa y los NPCs revelados, y resetea la zona de todos los jugadores a la primera de la variante nueva. No aplica el reset de NA de Leyenda Urbana (eso es específico de *entrar* al After, no de salir). No hace nada si ya está en la primera fase (`previa`) |
 | Revelado de NPCs | El DM elige un NPC del "mazo" de la fase actual (`data/npcs.json`, filtrado por su campo `fase`) y lo revela en una zona. La carta se dispara a todos los jugadores y queda como marcador fijo en el mapa. Los botones de la carta ("Hablar"/"Ignorar") sólo marcan que el jugador la vio — igual que con los eventos de fase, el DM sigue narrando y aplicando consecuencias (NA, prenda) a mano, sin lógica automática |
 | Estilo visual | Estética "neon boliche" de `mockups/JODA_RPG_mockups_neon_boliche.html` y `mockups/JODA_RPG_mockups_mapas_vivos.html`: fondo oscuro, acentos cian/rosa/violeta, tipografía grande y en negrita, tarjetas con bordes suaves. Se implementa con HTML/CSS plano (divs con posición absoluta, como en los mockups), sin canvas ni librerías de mapas — ver sección 5.7 para los tokens de diseño |
 | Alcance de los turnos | **Solo los encuentros de NPC** (levante/confrontación, ver fila de abajo) son por turnos. El resto del juego — tiradas libres de stat, NA, prendas, situaciones de fase — sigue funcionando como ya está: cualquier jugador actúa cuando quiere, sin esperar turno. No se reestructura lo ya construido en los milestones 1-9 |
@@ -462,40 +464,55 @@ quien defina el contenido.
 
 ### 5.6 `data/mapa.json`
 
-Zonas fijas por fase. Solo define **contenido** (id, nombre, emoji) — la
-**posición visual** de cada zona (izquierda/arriba/ancho/alto) vive en
-`static/style.css` como reglas CSS por `id` de zona, igual que en los
-mockups (`.dept-living`, `.club-bar`, etc.), para no mezclar datos con
-presentación.
+Cada fase tiene una **lista de variantes de mapa** (ej. distintos deptos de
+previa, distintos boliches), cada una con `id`, `nombre` (se muestra en
+pantalla, tanto en `/dm` como en `/jugador`) y sus `zonas`. Esto permite que
+haya varios lugares posibles por fase y que el DM elija cuál usar (o lo deje
+en random). La **posición visual** de cada zona (`left`/`top`/`width`/
+`height`, en porcentaje) vive *dentro* del JSON, en el campo `pos` de cada
+zona — no en CSS — porque cada variante puede tener una cantidad y forma de
+zonas distinta, y hardcodear esa posición por `id` de zona en
+`static/style.css` no escala a mapas configurables (ver sección 2, tabla de
+decisiones).
 
 ```json
 {
   "previa": [
-    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
-    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
-    { "id": "bano", "nombre": "Baño", "emoji": "🚪" },
-    { "id": "balcon", "nombre": "Balcón", "emoji": "🌙" }
+    {
+      "id": "depto_cruza",
+      "nombre": "Depto de Cruza",
+      "zonas": [
+        { "id": "living", "nombre": "Living", "emoji": "🛋️", "pos": { "left": 3, "top": 3, "width": 62, "height": 40 } },
+        { "id": "cocina", "nombre": "Cocina", "emoji": "🍕", "pos": { "left": 3, "top": 46, "width": 29, "height": 51 } },
+        { "id": "bano", "nombre": "Baño", "emoji": "🚪", "pos": { "left": 35, "top": 46, "width": 30, "height": 51 } },
+        { "id": "balcon", "nombre": "Balcón", "emoji": "🌙", "pos": { "left": 68, "top": 3, "width": 29, "height": 94 } }
+      ]
+    },
+    { "id": "depto_banana", "nombre": "Depto de Banana", "zonas": [ "..." ] }
   ],
   "boliche": [
-    { "id": "pista", "nombre": "Pista", "emoji": "🪩" },
-    { "id": "barra", "nombre": "Barra", "emoji": "🍸" },
-    { "id": "vip", "nombre": "VIP", "emoji": "⭐" },
-    { "id": "banos", "nombre": "Baños", "emoji": "🚻" },
-    { "id": "entrada", "nombre": "Entrada", "emoji": "🚪" }
+    { "id": "boliche_a", "nombre": "Boliche A", "zonas": [ "..." ] },
+    { "id": "boliche_b", "nombre": "Boliche B", "zonas": [ "..." ] }
   ],
   "after": [
-    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
-    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
-    { "id": "terraza", "nombre": "Terraza", "emoji": "🌆" },
-    { "id": "cuarto", "nombre": "Cuarto", "emoji": "🛏️" }
+    { "id": "after_cruza", "nombre": "Depto de Cruza (After)", "zonas": [ "..." ] },
+    { "id": "after_banana", "nombre": "Depto de Banana (After)", "zonas": [ "..." ] }
   ]
 }
 ```
 
-Cada jugador tiene una `zona_actual` (ver sección 6) dentro de las zonas de
-la fase activa; por defecto arranca en la primera zona de la lista de esa
-fase (ej. `entrada` en el Boliche) y el DM la puede cambiar en cualquier
-momento.
+Al entrar a una fase (avanzar o **volver atrás**, ver sección 7) se elige
+una variante al azar entre las de esa fase y queda guardada en
+`game_state["mapa_actual"]` (ver sección 6). El DM puede además elegir una
+variante específica a mano en cualquier momento (mensaje `cambiar_mapa`,
+sección 7), sin necesidad de cambiar de fase.
+
+Cada jugador tiene una `zona_actual` (ver sección 6) dentro de las zonas del
+`mapa_actual`; por defecto arranca en la primera zona de la variante activa,
+y el DM la puede cambiar en cualquier momento. Cambiar de mapa (por fase o
+a mano) resetea la `zona_actual` de todos los jugadores a esa primera zona
+y limpia los NPCs revelados, porque las zonas de la variante nueva pueden
+no tener nada que ver con las de la anterior.
 
 ### 5.7 Sistema visual (design tokens)
 
@@ -574,9 +591,10 @@ game_state = {
             "prendas_activas": [],       # lista de ids de prendas.json
             "habilidad_usada_fase": False,
             "habilidad_usada_noche": False,
-            "zona_actual": "entrada",    # id de zona de data/mapa.json para la fase activa
+            "zona_actual": "entrada",    # id de zona de la variante de mapa activa (mapa_actual)
         }
     },
+    "mapa_actual": { "id": "boliche_a", "nombre": "Boliche A", "zonas": [...] },  # variante de data/mapa.json en uso, ver sección 5.6
     "npcs_revelados": {
         # "<npc_id>": {
         #     "zona": "barra",
@@ -592,12 +610,19 @@ game_state = {
 }
 ```
 
-`npcs_revelados`, `situacion_actual` y `eventos_usados[fase_nueva]` se
-reinician (vacíos) cada vez que el DM avanza de fase — son propios de la
-escena en la que aparecieron, no persisten a la fase siguiente. `zona` en
-`npcs_revelados` solo aplica a NPCs "ambiente" (los de tipo "levante"/
-"confrontacion" no necesitan posición en el mapa, son un encuentro directo
-con un jugador, no un marcador ambiental).
+`npcs_revelados` y `situacion_actual` se reinician (vacíos) cada vez que el
+DM avanza o **retrocede** de fase, o cambia de variante de mapa a mano — son
+propios de la escena/mapa en el que aparecieron, no persisten a la fase o
+variante siguiente. `eventos_usados` **no** se reinicia al avanzar/retroceder
+de fase — se arma una sola vez en `estado_inicial()` y se va acumulando
+durante toda la partida, para que "🎲 Aleatoria" nunca repita un evento ya
+mostrado en esa fase, ni yendo y viniendo entre fases. `zona` en `npcs_revelados` solo aplica a
+NPCs "ambiente" (los de tipo "levante"/"confrontacion" no necesitan posición
+en el mapa, son un encuentro directo con un jugador, no un marcador
+ambiental). Cambiar de mapa (por fase o con `cambiar_mapa`) también resetea
+la `zona_actual` de todos los jugadores a la primera zona de la variante
+nueva, ya que las zonas de una variante distinta pueden no tener nada en
+común con las de la anterior.
 
 ## 7. WebSocket / API — contrato
 
@@ -616,26 +641,28 @@ Mensajes que el jugador puede enviar:
 - `{"type": "intentar_confrontacion", "npc_id": "...", "stat": "aguante"}` → solo válido si es el `jugador_objetivo` y `stat` es uno de los listados en `opciones` del NPC. Tira ese stat contra la dificultad de referencia que el DM diga en voz alta (sección 8) — la consecuencia la sigue aplicando el DM a mano (NA, prenda), como con cualquier otra tirada
 
 Mensajes que el jugador recibe (push del server):
-- `{"type": "estado", "na": 2, "prendas": [...], "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}, "situacion_actual": {...} | null}` (cada vez que cambia algo suyo, el mapa o la situación activa de la fase; las zonas fijas de la fase se resuelven client-side contra `data/mapa.json`; `situacion_actual` trae el evento completo, con `opciones` si las tiene)
+- `{"type": "estado", "na": 2, "prendas": [...], "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}, "situacion_actual": {...} | null, "mapa_actual": {"id": "boliche_a", "nombre": "Boliche A", "zonas": [...]}, "jugadores_en_mapa": [...]}` (cada vez que cambia algo suyo, el mapa o la situación activa de la fase; `mapa_actual` trae la variante de mapa completa —con nombre y zonas ya resueltas— para no depender de que el cliente tenga cacheado `data/mapa.json`; `situacion_actual` trae el evento completo, con `opciones` si las tiene)
 - `{"type": "npc_revelado", "npc": {...}, "zona": "barra" | null}` — NPCs `"ambiente"` llegan por broadcast a **todos** los jugadores, como antes. NPCs `"levante"`/`"confrontacion"` llegan **solo al `jugador_objetivo`** (mensaje dirigido, no broadcast); para `"levante"`, si el NA de ese jugador en el momento del reveal es alto (ver sección 2, "Misterio de lindura"), el objeto `npc` llega sin `nombre`/`avatar`/`puntaje_lindura` reales — reemplazados por placeholders de misterio (`"❓"`, `"Alguien"`) que el frontend muestra tal cual
 - `{"type": "resultado_levante", "npc_id": "...", "exito": true, "puntaje_lindura": 7, "dado_total": 14}` → push al `jugador_objetivo` al resolver el intento, siempre con el dato real ya revelado
 - `{"type": "narracion", "texto": "..."}` (cuando el DM dispara narración IA)
 
 ### `WS /ws/dm`
 Mensajes que el DM puede enviar:
-- `{"type": "avanzar_fase"}` → previa → boliche → after → terminado. Al avanzar, `npcs_revelados`, `situacion_actual` y `eventos_usados` de la fase nueva se vacían, y los `zona_actual` de los jugadores vuelven a la primera zona de la fase nueva
+- `{"type": "avanzar_fase"}` → previa → boliche → after → terminado (no hace nada si ya está en "terminado"). Al avanzar, se elige una variante de mapa al azar para la fase nueva (`mapa_actual`), `npcs_revelados` y `situacion_actual` se vacían, y los `zona_actual` de los jugadores vuelven a la primera zona de esa variante. Si la fase nueva es "after", además los jugadores en Leyenda Urbana (NA 10) bajan a Modo Caos (NA 6) — regla de sección 5.4
+- `{"type": "retroceder_fase"}` → la inversa de `avanzar_fase` (after → boliche → previa), no hace nada si ya está en "previa". Comparte la misma lógica de "entrar a una fase" que `avanzar_fase` (mapa al azar, reset de `npcs_revelados`/`situacion_actual`/zonas), salvo que nunca aplica el reset de NA de Leyenda Urbana — eso es específico de *entrar* al After
+- `{"type": "cambiar_mapa", "mapa_id": "depto_banana"}` (o `"mapa_id": null` / campo ausente para elegir una variante al azar de la fase activa) → cambia `mapa_actual` sin tocar la fase; resetea `npcs_revelados` y las `zona_actual` de los jugadores igual que un cambio de fase. Responde `{"type": "error", "detail": "..."}` si `mapa_id` no es una variante válida para la fase activa
 - `{"type": "ajustar_na", "player_id": "...", "delta": 1}`
 - `{"type": "repartir_prenda", "player_id": "...", "prenda_id": 7}` (o `null` para random del mazo)
 - `{"type": "resolver_prenda", "player_id": "...", "prenda_id": 7}`
-- `{"type": "mover_jugador", "player_id": "...", "zona": "barra"}` → cambia `zona_actual` de ese jugador (debe ser una zona válida de `data/mapa.json` para la fase activa)
+- `{"type": "mover_jugador", "player_id": "...", "zona": "barra"}` → cambia `zona_actual` de ese jugador (debe ser una zona válida del `mapa_actual`)
 - `{"type": "revelar_npc", "npc_id": "martina", "zona": "barra"}` (NPC ambiente, sin cambios) o `{"type": "revelar_npc", "modo": "random"}` (elige uno no revelado todavía de la fase activa) → agrega el NPC a `npcs_revelados`, dispara `npc_revelado` a todos los jugadores
-- `{"type": "revelar_npc_encuentro", "npc_id": "...", "jugador_objetivo": "...", "modo": "random"|"elegir"}` → para NPCs `"levante"`/`"confrontacion"`: agrega el NPC a `npcs_revelados` con ese `jugador_objetivo`, dispara `npc_revelado` **solo a ese jugador** (no broadcast). Con `"modo": "random"` el server elige el NPC entre los no usados de tipo levante/confrontación de la fase activa; con `"elegir"` se manda también `npc_id`
+- `{"type": "revelar_npc_encuentro", "npc_id": "...", "jugador_objetivo": "...", "modo": "random"|"elegir"}` → para NPCs `"levante"`/`"confrontacion"`: agrega el NPC a `npcs_revelados` con ese `jugador_objetivo`, dispara `npc_revelado` **solo a ese jugador** (no broadcast). Con `"modo": "random"` el server elige el NPC entre los **disponibles** de tipo levante/confrontación de la fase activa; con `"elegir"` se manda también `npc_id`. Un NPC de encuentro **no se agota al usarse**: una vez que su encuentro queda `resuelto` (el jugador ya tiró), vuelve a estar disponible para asignárselo a otro jugador (o al mismo) más adelante en la misma fase — tiene sentido narrativo, un mismo personaje puede cruzarse con más de uno en la noche. Lo único que lo bloquea es tener un encuentro **sin resolver** en curso con otro jugador; en ese caso `"elegir"` devuelve error y `"random"` no lo ofrece como candidato
 - `{"type": "ocultar_npc", "npc_id": "martina"}` → saca al NPC de `npcs_revelados` (para corregir un error del DM, no una mecánica de juego)
 - `{"type": "siguiente_situacion", "modo": "random"}` o `{"type": "siguiente_situacion", "modo": "elegir", "titulo": "DNI dudoso"}` → fija `situacion_actual` a ese evento de `eventos.json` (filtrado por fase activa), lo agrega a `eventos_usados[fase]`, y lo empuja a todos los jugadores dentro de su próximo `estado`
 - `{"type": "narrar_ia", "prompt_extra": "el Intenso acaba de fallar una tirada de Carisma feo"}` → server arma el prompt con contexto (fase actual, jugador, evento) y llama a Ollama
 
 Mensajes que el DM recibe (push del server):
-- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "situacion_actual": {...} | null, "log_eventos": [...]}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs). El DM siempre ve el `npc` completo en `npcs_revelados` (sin el misterio — el misterio es solo del lado del jugador que no debe saber)
+- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "situacion_actual": {...} | null, "log_eventos": [...], "mapa_actual": {"id": "...", "nombre": "...", "zonas": [...]}}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs). El DM siempre ve el `npc` completo en `npcs_revelados` (sin el misterio — el misterio es solo del lado del jugador que no debe saber)
 
 ---
 

@@ -5,33 +5,100 @@
   <title>Joda RPG — Panel del DM</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-  <h1>Panel del DM</h1>
-  <p>Fase actual: <strong id="fase-actual">-</strong></p>
-  <button id="btn-avanzar-fase" type="button">⚡ Avanzar fase</button>
-
-  <h2>Eventos de la fase</h2>
-  <div id="lista-eventos"></div>
-
-  <h2>Mapa</h2>
-  <div id="mapa-zonas"></div>
-
-  <h2>Revelar NPC</h2>
-  <div class="revelar-npc-form">
-    <select id="select-npc"></select>
-    <select id="select-zona-npc"></select>
-    <button id="btn-revelar-npc" type="button">Revelar</button>
+<body class="pagina-dm">
+  <div class="dm-topbar">
+    <div>
+      <div class="dm-logo">JODA RPG</div>
+      <div class="dm-sub">Panel del DM</div>
+    </div>
+    <div class="dm-topbar-right">
+      <button id="btn-nueva-partida" type="button" class="oculto">🔄 Nueva partida</button>
+      <div class="dm-fase-pill" id="fase-actual">-</div>
+    </div>
   </div>
 
-  <h2>Jugadores</h2>
-  <ul id="lista-jugadores">
-    <li>Cargando...</li>
-  </ul>
+  <div id="pantalla-crear-partida" class="pantalla-crear-partida">
+    <h1>Arrancar la noche</h1>
+    <p>Todavía no hay una partida activa. Creála para que los jugadores puedan unirse desde sus celus.</p>
+    <button id="btn-crear-partida" type="button">🎉 Crear partida</button>
+  </div>
 
-  <h2>Tiradas</h2>
-  <ul id="log-eventos">
-    <li>Cargando...</li>
-  </ul>
+  <div class="dm-grid oculto" id="dm-dashboard">
+    <main class="dm-main">
+      <section class="dm-card">
+        <div class="dm-card-head">
+          <h2>Situación actual</h2>
+          <div class="dm-card-head-botones">
+            <button id="btn-retroceder-fase" type="button">⬅️ Volver fase</button>
+            <button id="btn-avanzar-fase" type="button">⚡ Avanzar fase</button>
+          </div>
+        </div>
+        <div id="situacion-actual-card"></div>
+        <button id="btn-situacion-random" type="button">🎲 Situación aleatoria</button>
+      </section>
+
+      <section class="dm-card">
+        <div class="dm-card-head">
+          <h2 id="mapa-nombre-actual">Mapa</h2>
+          <div class="cambiar-mapa-form">
+            <select id="select-mapa"></select>
+            <button id="btn-cambiar-mapa" type="button">🗺️ Cambiar mapa</button>
+          </div>
+        </div>
+        <div id="mapa-visual" class="mapa-visual"></div>
+      </section>
+
+      <section class="dm-card">
+        <h2>Eventos de la fase</h2>
+        <div id="lista-eventos"></div>
+      </section>
+    </main>
+
+    <aside class="dm-sidebar">
+      <section class="dm-card">
+        <h2>Jugadores</h2>
+        <ul id="lista-jugadores">
+          <li>Cargando...</li>
+        </ul>
+      </section>
+
+      <section class="dm-card">
+        <h2>Revelar NPC</h2>
+        <div class="revelar-npc-form">
+          <select id="select-npc"></select>
+          <select id="select-zona-npc"></select>
+          <button id="btn-revelar-npc" type="button">Revelar</button>
+        </div>
+      </section>
+
+      <section class="dm-card">
+        <h2>Encuentro de NPC (levante / confrontación)</h2>
+        <div class="revelar-npc-form">
+          <select id="select-npc-encuentro"></select>
+          <select id="select-jugador-objetivo"></select>
+          <button id="btn-revelar-encuentro" type="button">Revelar encuentro</button>
+        </div>
+        <div id="lista-encuentros"></div>
+      </section>
+
+      <section class="dm-card">
+        <h2>Narrador IA</h2>
+        <textarea id="narrar-prompt-extra" placeholder="Contexto extra (opcional): ej. Facu falló Carisma feo, Juli está en Modo Caos..."></textarea>
+        <button id="btn-narrar-ia" type="button">🪄 Narrar con IA</button>
+        <div id="resultado-narracion" class="oculto">
+          <p id="narracion-texto"></p>
+          <button id="btn-broadcast-narracion" type="button">📢 Compartir con todos</button>
+        </div>
+      </section>
+
+      <section class="dm-card">
+        <h2>Tiradas</h2>
+        <ul id="log-eventos">
+          <li>Cargando...</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
 
   <script src="/static/dm.js"></script>
 </body>

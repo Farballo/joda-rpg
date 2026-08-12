@@ -6,7 +6,7 @@
   <title>Joda RPG — Jugador</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="pagina-jugador">
   <h1>Joda RPG</h1>
 
   <form id="form-join">
@@ -30,6 +30,20 @@
 
     <div id="modo-caos" class="oculto"></div>
 
+    <div id="situacion-actual" class="oculto">
+      <h2>Situación actual</h2>
+      <div class="situacion-card">
+        <div class="evento-titulo" id="situacion-titulo"></div>
+        <p id="situacion-texto"></p>
+        <div id="situacion-opciones"></div>
+      </div>
+    </div>
+
+    <div id="narracion-ia" class="oculto">
+      <h2>📖 Narración</h2>
+      <p id="narracion-ia-texto"></p>
+    </div>
+
     <h2>Prenda</h2>
     <div id="prendas-activas"></div>
 
@@ -47,6 +61,8 @@
       <div id="mapa-zonas-jugador"></div>
       <button id="btn-cerrar-mapa" type="button">← Volver a la partida</button>
     </div>
+
+    <button id="btn-salir-partida" type="button">Salir de la partida</button>
   </div>
 
   <div id="npc-card-overlay" class="oculto">
@@ -56,10 +72,8 @@
       <h2 id="npc-card-nombre"></h2>
       <p class="npc-card-apodo" id="npc-card-apodo"></p>
       <p id="npc-card-frase"></p>
-      <div class="npc-card-actions">
-        <button id="btn-npc-hablar" type="button">Hablar</button>
-        <button id="btn-npc-ignorar" type="button">Ignorar</button>
-      </div>
+      <div id="npc-card-lindura"></div>
+      <div class="npc-card-actions" id="npc-card-actions"></div>
     </div>
   </div>
 

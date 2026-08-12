@@ -6,6 +6,7 @@
     "avatar": "👩🏻",
     "frase_reveal": "¿Ustedes son los de la mesa 4?",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -15,6 +16,7 @@
     "avatar": "🍸",
     "frase_reveal": "¿Lo de siempre o quieren sorprenderse?",
     "importancia": "npc",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -24,6 +26,7 @@
     "avatar": "🕶️",
     "frase_reveal": "Chicos, bajen un poco la música, ¿no?",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "previa"
   },
   {
@@ -33,6 +36,7 @@
     "avatar": "🕶️",
     "frase_reveal": "Te mira desde la barra y levanta el vaso.",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -42,6 +46,88 @@
     "avatar": "🧑",
     "frase_reveal": "Sale del baño gritando algo que nadie entiende.",
     "importancia": "npc",
+    "tipo": "ambiente",
     "fase": "boliche"
+  },
+  {
+    "id": "sofia",
+    "nombre": "Sofía",
+    "apodo": "La del grupo de al lado",
+    "avatar": "💃",
+    "frase_reveal": "Te mira desde el otro sillón y se ríe con las amigas.",
+    "importancia": "npc",
+    "tipo": "levante",
+    "fase": "previa",
+    "puntaje_lindura": 6,
+    "dificultad_chamuyo": 12
+  },
+  {
+    "id": "hermano_mayor",
+    "nombre": "El Hermano Mayor",
+    "apodo": "El dueño de casa en potencia",
+    "avatar": "😤",
+    "frase_reveal": "\"Como rompan algo, se los cobro a todos.\"",
+    "importancia": "importante",
+    "tipo": "confrontacion",
+    "fase": "previa",
+    "opciones": [
+      { "texto": "Lo calmás con onda", "stat": "carisma" },
+      { "texto": "Le decís que se relaje, no pasa nada", "stat": "presencia" },
+      { "texto": "Le ofrecés hacerte cargo si algo se rompe", "stat": "suerte" }
+    ]
+  },
+  {
+    "id": "el_rulo",
+    "nombre": "El Rulo",
+    "apodo": "El que no para de mirar",
+    "avatar": "😏",
+    "frase_reveal": "Te choca el hombro \"sin querer\" pasando por la pista.",
+    "importancia": "npc",
+    "tipo": "levante",
+    "fase": "boliche",
+    "puntaje_lindura": 8,
+    "dificultad_chamuyo": 14
+  },
+  {
+    "id": "patovica",
+    "nombre": "El Patovica",
+    "apodo": "El de la entrada",
+    "avatar": "🛑",
+    "frase_reveal": "\"A ver, documento. ¿Y ese estado en el que venís?\"",
+    "importancia": "importante",
+    "tipo": "confrontacion",
+    "fase": "boliche",
+    "opciones": [
+      { "texto": "Lo tratás de convencer", "stat": "carisma" },
+      { "texto": "Te la jugás y pasás igual", "stat": "aguante" },
+      { "texto": "Le birlás algo para que te deje pasar", "stat": "suerte" }
+    ]
+  },
+  {
+    "id": "morocho_after",
+    "nombre": "El Morocho de Ojos Claros",
+    "apodo": "El que quedó dando vueltas",
+    "avatar": "🌙",
+    "frase_reveal": "Está sentado en un rincón mirando el techo, pero te mira de reojo cuando pasás.",
+    "importancia": "npc",
+    "tipo": "levante",
+    "fase": "after",
+    "puntaje_lindura": 7,
+    "dificultad_chamuyo": 13
+  },
+  {
+    "id": "vecino_6am",
+    "nombre": "El Vecino de las 6 AM",
+    "apodo": "El que ya llamó a la policía dos veces",
+    "avatar": "📢",
+    "frase_reveal": "Golpea la puerta en piyama: \"¡Basta! ¡Son las 6 de la mañana!\"",
+    "importancia": "importante",
+    "tipo": "confrontacion",
+    "fase": "after",
+    "opciones": [
+      { "texto": "Le pedís disculpas y lo calmás", "stat": "carisma" },
+      { "texto": "Le bajás el volumen a todo y aguantás el reto", "stat": "aguante" },
+      { "texto": "Le ofrecés algo para que se vaya tranquilo", "stat": "astucia" }
+    ]
   }
 ]

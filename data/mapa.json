@@ -1,21 +1,71 @@
 {
   "previa": [
-    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
-    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
-    { "id": "bano", "nombre": "Baño", "emoji": "🚪" },
-    { "id": "balcon", "nombre": "Balcón", "emoji": "🌙" }
+    {
+      "id": "depto_cruza",
+      "nombre": "Depto de Cruza",
+      "zonas": [
+        { "id": "living", "nombre": "Living", "emoji": "🛋️", "pos": { "left": 3, "top": 3, "width": 62, "height": 40 } },
+        { "id": "cocina", "nombre": "Cocina", "emoji": "🍕", "pos": { "left": 3, "top": 46, "width": 29, "height": 51 } },
+        { "id": "bano", "nombre": "Baño", "emoji": "🚪", "pos": { "left": 35, "top": 46, "width": 30, "height": 51 } },
+        { "id": "balcon", "nombre": "Balcón", "emoji": "🌙", "pos": { "left": 68, "top": 3, "width": 29, "height": 94 } }
+      ]
+    },
+    {
+      "id": "depto_banana",
+      "nombre": "Depto de Banana",
+      "zonas": [
+        { "id": "living", "nombre": "Living", "emoji": "🛋️", "pos": { "left": 3, "top": 3, "width": 45, "height": 60 } },
+        { "id": "cocina", "nombre": "Cocina", "emoji": "🍕", "pos": { "left": 50, "top": 3, "width": 47, "height": 28 } },
+        { "id": "bano", "nombre": "Baño", "emoji": "🚪", "pos": { "left": 50, "top": 33, "width": 22, "height": 30 } },
+        { "id": "terraza", "nombre": "Terraza", "emoji": "🌙", "pos": { "left": 74, "top": 33, "width": 23, "height": 64 } },
+        { "id": "pasillo", "nombre": "Pasillo", "emoji": "🚪", "pos": { "left": 3, "top": 65, "width": 45, "height": 32 } }
+      ]
+    }
   ],
   "boliche": [
-    { "id": "pista", "nombre": "Pista", "emoji": "🪩" },
-    { "id": "barra", "nombre": "Barra", "emoji": "🍸" },
-    { "id": "vip", "nombre": "VIP", "emoji": "⭐" },
-    { "id": "banos", "nombre": "Baños", "emoji": "🚻" },
-    { "id": "entrada", "nombre": "Entrada", "emoji": "🚪" }
+    {
+      "id": "boliche_a",
+      "nombre": "Boliche A",
+      "zonas": [
+        { "id": "pista", "nombre": "Pista", "emoji": "🪩", "pos": { "left": 28, "top": 5, "width": 44, "height": 52 } },
+        { "id": "barra", "nombre": "Barra", "emoji": "🍸", "pos": { "left": 3, "top": 18, "width": 22, "height": 62 } },
+        { "id": "vip", "nombre": "VIP", "emoji": "⭐", "pos": { "left": 75, "top": 3, "width": 22, "height": 32 } },
+        { "id": "banos", "nombre": "Baños", "emoji": "🚻", "pos": { "left": 75, "top": 62, "width": 22, "height": 33 } },
+        { "id": "entrada", "nombre": "Entrada", "emoji": "🚪", "pos": { "left": 28, "top": 60, "width": 44, "height": 35 } }
+      ]
+    },
+    {
+      "id": "boliche_b",
+      "nombre": "Boliche B",
+      "zonas": [
+        { "id": "pista", "nombre": "Pista", "emoji": "🪩", "pos": { "left": 3, "top": 3, "width": 55, "height": 55 } },
+        { "id": "barra", "nombre": "Barra", "emoji": "🍸", "pos": { "left": 61, "top": 3, "width": 36, "height": 26 } },
+        { "id": "patio", "nombre": "Patio", "emoji": "🌙", "pos": { "left": 61, "top": 32, "width": 36, "height": 26 } },
+        { "id": "banos", "nombre": "Baños", "emoji": "🚻", "pos": { "left": 61, "top": 61, "width": 36, "height": 34 } },
+        { "id": "entrada", "nombre": "Entrada", "emoji": "🚪", "pos": { "left": 3, "top": 61, "width": 55, "height": 34 } }
+      ]
+    }
   ],
   "after": [
-    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
-    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
-    { "id": "terraza", "nombre": "Terraza", "emoji": "🌆" },
-    { "id": "cuarto", "nombre": "Cuarto", "emoji": "🛏️" }
+    {
+      "id": "after_cruza",
+      "nombre": "Depto de Cruza (After)",
+      "zonas": [
+        { "id": "living", "nombre": "Living", "emoji": "🛋️", "pos": { "left": 3, "top": 3, "width": 62, "height": 40 } },
+        { "id": "cocina", "nombre": "Cocina", "emoji": "🍕", "pos": { "left": 3, "top": 46, "width": 29, "height": 51 } },
+        { "id": "terraza", "nombre": "Terraza", "emoji": "🌆", "pos": { "left": 35, "top": 46, "width": 30, "height": 51 } },
+        { "id": "cuarto", "nombre": "Cuarto", "emoji": "🛏️", "pos": { "left": 68, "top": 3, "width": 29, "height": 94 } }
+      ]
+    },
+    {
+      "id": "after_banana",
+      "nombre": "Depto de Banana (After)",
+      "zonas": [
+        { "id": "living", "nombre": "Living", "emoji": "🛋️", "pos": { "left": 3, "top": 3, "width": 45, "height": 60 } },
+        { "id": "terraza", "nombre": "Terraza", "emoji": "🌆", "pos": { "left": 50, "top": 3, "width": 47, "height": 45 } },
+        { "id": "cuarto", "nombre": "Cuarto", "emoji": "🛏️", "pos": { "left": 50, "top": 50, "width": 47, "height": 47 } },
+        { "id": "cocina", "nombre": "Cocina", "emoji": "🍕", "pos": { "left": 3, "top": 65, "width": 45, "height": 32 } }
+      ]
+    }
   ]
 }
