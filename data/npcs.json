@@ -1,0 +1,47 @@
+[
+  {
+    "id": "martina",
+    "nombre": "Martina",
+    "apodo": "La DJ",
+    "avatar": "👩🏻",
+    "frase_reveal": "¿Ustedes son los de la mesa 4?",
+    "importancia": "importante",
+    "fase": "boliche"
+  },
+  {
+    "id": "bartender",
+    "nombre": "El Bartender",
+    "apodo": "El de la barra",
+    "avatar": "🍸",
+    "frase_reveal": "¿Lo de siempre o quieren sorprenderse?",
+    "importancia": "npc",
+    "fase": "boliche"
+  },
+  {
+    "id": "vecina",
+    "nombre": "La Vecina",
+    "apodo": "La del piso de arriba",
+    "avatar": "🕶️",
+    "frase_reveal": "Chicos, bajen un poco la música, ¿no?",
+    "importancia": "importante",
+    "fase": "previa"
+  },
+  {
+    "id": "desconocido_barra",
+    "nombre": "El Desconocido",
+    "apodo": "???",
+    "avatar": "🕶️",
+    "frase_reveal": "Te mira desde la barra y levanta el vaso.",
+    "importancia": "importante",
+    "fase": "boliche"
+  },
+  {
+    "id": "flaco_bano",
+    "nombre": "El Flaco",
+    "apodo": "El del baño",
+    "avatar": "🧑",
+    "frase_reveal": "Sale del baño gritando algo que nadie entiende.",
+    "importancia": "npc",
+    "fase": "boliche"
+  }
+]

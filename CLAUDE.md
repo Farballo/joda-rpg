@@ -72,8 +72,18 @@ static/jugador.html      # vista del jugador (mobile-first)
    de NA (ver sección 5.4 del plan, escala 0-10).
 
 3. **No implementar nada fuera de scope del MVP** (sección 1 del plan):
-   nada de Encare, Reputación, ni cartas especiales de chamuyo. Si algo
-   "sumaría", no agregarlo sin que se pida explícitamente.
+   nada de Reputación ni recompensas de coronación. Si algo "sumaría", no
+   agregarlo sin que se pida explícitamente. *(El sistema de Encare —
+   encuentros de NPC "levante"/"confrontación" por turnos, sección 2 y
+   milestone 11 del plan — dejó de estar excluido: se agregó a pedido
+   explícito, acotado a lo que describe el plan. No lo confundas con
+   "agregar algo porque sumaría": ya está pedido, hay que construirlo.)*
+
+3.1. **Los encuentros de NPC (levante/confrontación) son por turnos, el
+   resto del juego no.** Tiradas libres, NA, prendas y situaciones de fase
+   siguen sin turno, cualquier jugador actúa cuando quiere. El turno solo
+   aplica cuando el DM asigna un encuentro de NPC a un jugador específico
+   (sección 2 del plan, "Alcance de los turnos").
 
 4. **Los datos de `data/*.json` ya están definidos en la sección 5 del
    plan** — copiarlos tal cual, no resumirlos ni reinventarlos.

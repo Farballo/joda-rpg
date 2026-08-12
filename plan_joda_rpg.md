@@ -31,12 +31,23 @@ grupo, o incluso hotspot del celu si la wifi falla) y cubre:
   Previa, pista/barra/VIP/baños en el Boliche, etc.), donde el DM va
   revelando NPCs que aparecen como **cartas de personaje** para todos
   los jugadores a la vez
+- Situaciones de fase con **opciones múltiples**: cuando una situación lo
+  permite, el jugador elige *cómo* encara el problema (ej. chamuyar,
+  coimear, apurar) y esa elección determina qué stat se tira — ver
+  sección 5.8
+- Sistema de **encuentros con NPC por turnos**: NPCs de tipo "levante"
+  (intentar levantarse a alguien, con puntaje de atractivo y dificultad de
+  chamuyo) y de tipo "confrontación" (pelear/convencer/sobornar a alguien,
+  como un patovica o un grupo de rugbiers). El DM asigna el encuentro a un
+  jugador específico — ver sección 2 y 5.5
 - Narración asistida por IA local (Ollama) opcional, disparada por el DM
 
 **Fuera de alcance del MVP** (se agrega después si el MVP funciona bien en
-una previa real): sistema de Encare/Coronar, Reputación, cartas especiales
-de chamuyo, recompensas de coronación, persistencia entre reinicios del
-server.
+una previa real): sistema de Reputación, recompensas de coronación,
+persistencia entre reinicios del server. *(El sistema de Encare/chamuyo
+que este documento excluía originalmente ya no está fuera de alcance —
+ver la fila "Encuentros de NPC (levante/confrontación)" en la sección 2:
+se agregó explícitamente a pedido, en una versión acotada.)*
 
 ---
 
@@ -57,6 +68,12 @@ server.
 | Posicionamiento en el mapa | **Zonas fijas por fase**, no drag & drop libre. Cada fase define sus zonas en `data/mapa.json` (living, cocina, barra, VIP, etc.) con posición y tamaño fijados en CSS. El DM asigna un jugador o un NPC a una zona con un click/dropdown, no arrastrando tokens a coordenadas libres |
 | Revelado de NPCs | El DM elige un NPC del "mazo" de la fase actual (`data/npcs.json`, filtrado por su campo `fase`) y lo revela en una zona. La carta se dispara a todos los jugadores y queda como marcador fijo en el mapa. Los botones de la carta ("Hablar"/"Ignorar") sólo marcan que el jugador la vio — igual que con los eventos de fase, el DM sigue narrando y aplicando consecuencias (NA, prenda) a mano, sin lógica automática |
 | Estilo visual | Estética "neon boliche" de `mockups/JODA_RPG_mockups_neon_boliche.html` y `mockups/JODA_RPG_mockups_mapas_vivos.html`: fondo oscuro, acentos cian/rosa/violeta, tipografía grande y en negrita, tarjetas con bordes suaves. Se implementa con HTML/CSS plano (divs con posición absoluta, como en los mockups), sin canvas ni librerías de mapas — ver sección 5.7 para los tokens de diseño |
+| Alcance de los turnos | **Solo los encuentros de NPC** (levante/confrontación, ver fila de abajo) son por turnos. El resto del juego — tiradas libres de stat, NA, prendas, situaciones de fase — sigue funcionando como ya está: cualquier jugador actúa cuando quiere, sin esperar turno. No se reestructura lo ya construido en los milestones 1-9 |
+| Orden de turno en encuentros | El DM asigna a mano qué jugador le toca en cada encuentro de NPC (levante o confrontación), sin rotación automática fija. Más trabajo para el DM que una cola automática, pero más flexible para narrar (ej. asignarle el encuentro al jugador que más sentido tenga en ese momento) |
+| Encuentros de NPC (levante/confrontación) | Se agrega `tipo` a `data/npcs.json`: `"ambiente"` (los NPCs ya existentes, decorativos, revelado global — sin cambios), `"levante"` (intentar levantarse a alguien: `puntaje_lindura` 1-10 y `dificultad_chamuyo`) o `"confrontacion"` (pelear/convencer/sobornar a alguien: `opciones` con stat sugerido por enfoque, mismo esquema que la fila de abajo). A diferencia de los NPCs ambiente, estos se revelan **dirigidos a un jugador específico** (el del turno asignado), no a todos — ver sección 5.5 y 7 |
+| Misterio de lindura en el levante | Si el jugador objetivo tiene NA alto (propuesta: **NA ≥ 8, "Irrecuperable"**, umbral ajustable), la carta del NPC de levante le llega **sin revelar**: sin nombre, sin imagen, sin `puntaje_lindura` — solo "❓ Alguien te llama la atención". El jugador igual puede intentar el chamuyo a ciegas. Después de resolver el intento (haya salido bien o mal), se revela la identidad real sin importar el NA — el misterio es previo a la tirada, no una tirada distinta ni un fallo automático. No hace falta lógica de "consuelo" (asignar otro NPC feo automáticamente): alcanza con no mostrar el dato, la sorpresa la da la carta ya revelada al final |
+| Situaciones con opciones | Los eventos de `data/eventos.json` pueden tener un campo opcional `opciones` (mismo esquema que en NPCs de confrontación): 2-3 formas distintas de encarar la situación, cada una mapeada a un stat distinto (ej. "Lo chamuyás" → Carisma, "Lo coimeás" → Suerte, "Lo apurás" → Presencia). Si el evento tiene `opciones`, el jugador elige una en vez de tirar cualquiera de sus 5 stats libremente; si no las tiene, se comporta como hoy (tirada libre, el DM decide qué stat pedir en voz alta). No todos los eventos necesitan `opciones` — es un campo opcional, se completa evento por evento más adelante (ver sección 5.8) |
+| Selección de próxima situación/NPC | El DM elige explícitamente la "situación actual" de la fase, de a una por vez: botón "🎲 Aleatoria" (elige una no usada todavía de `eventos.json`) o selecciona una puntual de la lista. Mismo patrón para NPCs (ya existía el modo "elegir" desde el mazo; se agrega el modo "🎲 Aleatorio"). Reemplaza la vista de milestone 6 que mostraba todas las tarjetas de la fase como referencia estática — ahora hay una sola "situación activa" visible para todos, más prolijo y más parecido al flujo de "⚡ Siguiente situación" de los mockups |
 
 ---
 
@@ -244,7 +261,24 @@ para una escala de NA 0-10 y una tirada de 2d6.
 
 ### 5.3 `data/eventos.json`
 
-Solo texto de referencia para el DM — no dispara lógica automática.
+Texto de referencia para el DM — no dispara lógica automática de
+consecuencias (eso lo sigue decidiendo el DM a mano, como siempre). Cada
+evento puede tener opcionalmente un campo `opciones` (ver esquema
+compartido en 5.8): si lo tiene, el jugador elige entre 2-3 formas
+distintas de encarar la situación y esa elección define qué stat se tira;
+si no lo tiene, sigue funcionando como hasta ahora (tirada libre, el DM
+pide el stat en voz alta). No hace falta agregarle `opciones` a los 26
+eventos ya definidos de una — se va completando evento por evento más
+adelante. Como referencia de la forma, así quedaría el evento "DNI dudoso"
+con el ejemplo que diste (patovica que no te deja entrar):
+
+```json
+{ "titulo": "DNI dudoso", "texto": "El patovica no te quiere dejar entrar sin DNI.", "opciones": [
+  { "texto": "Lo tratás de chamuyar", "stat": "carisma" },
+  { "texto": "Lo coimeás", "stat": "suerte" },
+  { "texto": "Lo apurás", "stat": "presencia" }
+] }
+```
 
 ```json
 {
@@ -301,10 +335,28 @@ cantidad de dados.
 
 ### 5.5 `data/npcs.json`
 
-"Mazo" de personajes que el DM puede revelar durante la noche. `importancia`
-es solo cosmética (define el color/glow de la carta y del marcador en el
-mapa: `npc` = blanco, `importante` = magenta). `fase` filtra qué NPCs le
-aparecen al DM para elegir según la fase activa.
+"Mazo" de personajes que el DM puede revelar durante la noche. Todo NPC
+tiene un `tipo` que determina cómo se comporta:
+
+- **`"ambiente"`**: decorativo, sin mecánica propia (los 5 que ya
+  estaban). Se revela **a todos los jugadores a la vez** (revelado
+  global, sin turno) y queda como marcador fijo en el mapa. `importancia`
+  (`npc` blanco / `importante` magenta) solo cambia el color de la carta.
+- **`"levante"`**: intentar levantarse a alguien. Tiene `puntaje_lindura`
+  (1-10) y `dificultad_chamuyo` (número a superar con la tirada de
+  Carisma). Se revela **dirigido a un único jugador** (el del turno que
+  asignó el DM), no a todos — ver sección 2, fila "Misterio de lindura".
+- **`"confrontacion"`**: alguien a quien hay que convencer, pelear o
+  sobornar para pasar una situación (patovica, rugbiers borrachos,
+  etc.). Tiene `opciones` (mismo esquema que en `eventos.json`, ver
+  sección 5.8): 2-3 enfoques posibles, cada uno con su stat. También se
+  revela **dirigido a un único jugador**.
+
+`fase` sigue filtrando qué NPCs le aparecen al DM para elegir según la
+fase activa, para los tres tipos.
+
+Los 5 NPCs `"ambiente"` ya definidos no cambian de contenido, solo suman
+el campo `tipo`:
 
 ```json
 [
@@ -315,6 +367,7 @@ aparecen al DM para elegir según la fase activa.
     "avatar": "👩🏻",
     "frase_reveal": "¿Ustedes son los de la mesa 4?",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -324,6 +377,7 @@ aparecen al DM para elegir según la fase activa.
     "avatar": "🍸",
     "frase_reveal": "¿Lo de siempre o quieren sorprenderse?",
     "importancia": "npc",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -333,6 +387,7 @@ aparecen al DM para elegir según la fase activa.
     "avatar": "🕶️",
     "frase_reveal": "Chicos, bajen un poco la música, ¿no?",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "previa"
   },
   {
@@ -342,6 +397,7 @@ aparecen al DM para elegir según la fase activa.
     "avatar": "🕶️",
     "frase_reveal": "Te mira desde la barra y levanta el vaso.",
     "importancia": "importante",
+    "tipo": "ambiente",
     "fase": "boliche"
   },
   {
@@ -351,14 +407,58 @@ aparecen al DM para elegir según la fase activa.
     "avatar": "🧑",
     "frase_reveal": "Sale del baño gritando algo que nadie entiende.",
     "importancia": "npc",
+    "tipo": "ambiente",
     "fase": "boliche"
   }
 ]
 ```
 
-Este set de NPCs es un punto de partida — se puede ampliar con más
-personajes por fase antes de la noche del evento, siempre respetando el
-mismo esquema de campos.
+Este set de NPCs ambiente es un punto de partida — se puede ampliar con
+más personajes por fase antes de la noche del evento, siempre respetando
+el mismo esquema de campos.
+
+**No se definen acá los NPCs de tipo `levante` ni `confrontacion`** — se
+arman aparte, en particular. La forma que van a tener (sin inventar
+personajes concretos todavía):
+
+```json
+{
+  "id": "<id_unico>",
+  "nombre": "<nombre>",
+  "apodo": "<apodo>",
+  "avatar": "<emoji o, más adelante, imagen/dibujo>",
+  "frase_reveal": "<frase de presentación>",
+  "importancia": "npc",
+  "tipo": "levante",
+  "fase": "boliche",
+  "puntaje_lindura": 7,
+  "dificultad_chamuyo": 12
+}
+```
+
+```json
+{
+  "id": "<id_unico>",
+  "nombre": "<nombre>",
+  "apodo": "<apodo>",
+  "avatar": "<emoji o, más adelante, imagen/dibujo>",
+  "frase_reveal": "<frase de presentación>",
+  "importancia": "importante",
+  "tipo": "confrontacion",
+  "fase": "boliche",
+  "opciones": [
+    { "texto": "Lo tratás de convencer", "stat": "carisma" },
+    { "texto": "Te la jugás y te vas al humo", "stat": "aguante" },
+    { "texto": "Le ofrecés algo", "stat": "suerte" }
+  ]
+}
+```
+
+`dificultad_chamuyo` usa la misma escala que las dificultades de
+referencia recalibradas en la sección 8 (10 fácil, 13 normal, 16 difícil,
+19+ muy difícil) — un `puntaje_lindura` más alto debería, en general, ir
+con una `dificultad_chamuyo` más alta, pero eso lo termina de calibrar
+quien defina el contenido.
 
 ### 5.6 `data/mapa.json`
 
@@ -433,6 +533,31 @@ la cumple igual). Colores con significado fijo:
 - **Rosa/magenta**: NPCs importantes y cartas nuevas
 - **Amarillo** (`--yellow`): eventos activos
 
+### 5.8 Esquema compartido: `opciones`
+
+Usado en dos lugares — un evento de `data/eventos.json` (sección 5.3) y un
+NPC `tipo: "confrontacion"` de `data/npcs.json` (sección 5.5). Es la misma
+forma en los dos casos, así que se define una sola vez acá:
+
+```json
+"opciones": [
+  { "texto": "Lo tratás de chamuyar", "stat": "carisma" },
+  { "texto": "Lo coimeás", "stat": "suerte" },
+  { "texto": "Lo apurás", "stat": "presencia" }
+]
+```
+
+Cada opción es texto + un `stat` de los 5 existentes (`carisma`,
+`aguante`, `astucia`, `presencia`, `suerte`). El jugador elige una opción
+en su celu; el server tira `2d6 + stat_elegido + modificador_na` igual que
+cualquier otra tirada (sección 8) — no es un mecanismo nuevo, es
+`tirar_dado` con el stat ya decidido de antemano por la elección en vez de
+que el jugador lo elija directo. No lleva dificultad propia por opción:
+la dificultad de referencia general (sección 8) sigue siendo la que el DM
+dice en voz alta, y sigue siendo el DM quien decide la consecuencia
+narrativa del resultado — elegir una opción solo fija qué stat se tira, no
+automatiza qué pasa después.
+
 ---
 
 ## 6. Estado del juego (en memoria, `game_state.py`)
@@ -453,15 +578,26 @@ game_state = {
         }
     },
     "npcs_revelados": {
-        # "<npc_id>": {"zona": "barra"} — NPCs que el DM ya reveló en la fase activa
+        # "<npc_id>": {
+        #     "zona": "barra",
+        #     "jugador_objetivo": None,   # player_id, solo para tipo "levante"/"confrontacion"
+        #     "resuelto": False,          # True una vez que el jugador_objetivo tiró el intento
+        # }
+    },
+    "situacion_actual": None,  # el evento activo de eventos.json (dict completo) o None
+    "eventos_usados": {
+        "previa": [], "boliche": [], "after": []  # títulos ya mostrados, por fase — para no repetir en modo aleatorio
     },
     "log_eventos": []  # historial simple para mostrar en pantalla del DM
 }
 ```
 
-`npcs_revelados` se reinicia (vacío) cada vez que el DM avanza de fase —
-los NPCs son propios de la escena en la que aparecieron, no persisten a la
-fase siguiente.
+`npcs_revelados`, `situacion_actual` y `eventos_usados[fase_nueva]` se
+reinician (vacíos) cada vez que el DM avanza de fase — son propios de la
+escena en la que aparecieron, no persisten a la fase siguiente. `zona` en
+`npcs_revelados` solo aplica a NPCs "ambiente" (los de tipo "levante"/
+"confrontacion" no necesitan posición en el mapa, son un encuentro directo
+con un jugador, no un marcador ambiental).
 
 ## 7. WebSocket / API — contrato
 
@@ -473,27 +609,33 @@ Body: `{ "nombre": str, "personaje_id": str }` → devuelve `player_id` y arma l
 
 ### `WS /ws/player/{player_id}`
 Mensajes que el jugador puede enviar:
-- `{"type": "tirar_dado", "stat": "carisma"}` → server calcula `1d6 + stat` (o `2d6, min` si NA≥4), aplica modificadores de NA, devuelve resultado a ese jugador y lo loguea para el DM.
+- `{"type": "tirar_dado", "stat": "carisma", "contexto": "Lo coimeás"}` → server tira 2d6, los suma, aplica modificador de NA (ver sección 5.4/8), devuelve resultado a ese jugador y lo loguea para el DM. `contexto` es **opcional**: si el jugador eligió una `opción` de la situación activa (sección 5.8), se manda el texto de esa opción solo para que el log del DM sea legible ("Facu intentó coimear (Suerte)" en vez de "Facu tiró Suerte"); no cambia la mecánica de la tirada en nada.
 - `{"type": "usar_habilidad"}` → marca habilidad usada, devuelve texto de la habilidad.
+- `{"type": "resolver_prenda", "prenda_id": 7}` → saca esa prenda de sus `prendas_activas`. Nota: originalmente esta sección solo listaba `resolver_prenda` como mensaje del DM (ver `WS /ws/dm` más abajo), pero el milestone 5 pide explícitamente un botón de "resolver" en la pantalla del jugador — se agrega acá para que el jugador pueda resolverla él mismo, sin depender de que el DM lo haga por él. Las dos vías (DM o jugador) llaman a la misma mutación en `game_state.py` y quedan habilitadas
+- `{"type": "intentar_levante", "npc_id": "..."}` → solo válido si `npcs_revelados[npc_id]["jugador_objetivo"]` es este jugador. Tira Carisma vs `dificultad_chamuyo` del NPC (2d6 + Carisma + modificador_na vs el número), marca el NPC como `resuelto` y devuelve `resultado_levante` con el `puntaje_lindura` real, sin importar el NA que tenga en ese momento (el misterio ya cumplió su función al revelarse la carta, no en el resultado)
+- `{"type": "intentar_confrontacion", "npc_id": "...", "stat": "aguante"}` → solo válido si es el `jugador_objetivo` y `stat` es uno de los listados en `opciones` del NPC. Tira ese stat contra la dificultad de referencia que el DM diga en voz alta (sección 8) — la consecuencia la sigue aplicando el DM a mano (NA, prenda), como con cualquier otra tirada
 
 Mensajes que el jugador recibe (push del server):
-- `{"type": "estado", "na": 2, "prendas": [...], "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}}` (cada vez que cambia algo suyo o el mapa de la fase activa; las zonas fijas de la fase se resuelven client-side contra `data/mapa.json`)
-- `{"type": "npc_revelado", "npc": {...}, "zona": "barra"}` (push inmediato cuando el DM revela un NPC — dispara la animación de carta nueva en el celu de todos, además de quedar reflejado en el próximo `estado`)
+- `{"type": "estado", "na": 2, "prendas": [...], "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}, "situacion_actual": {...} | null}` (cada vez que cambia algo suyo, el mapa o la situación activa de la fase; las zonas fijas de la fase se resuelven client-side contra `data/mapa.json`; `situacion_actual` trae el evento completo, con `opciones` si las tiene)
+- `{"type": "npc_revelado", "npc": {...}, "zona": "barra" | null}` — NPCs `"ambiente"` llegan por broadcast a **todos** los jugadores, como antes. NPCs `"levante"`/`"confrontacion"` llegan **solo al `jugador_objetivo`** (mensaje dirigido, no broadcast); para `"levante"`, si el NA de ese jugador en el momento del reveal es alto (ver sección 2, "Misterio de lindura"), el objeto `npc` llega sin `nombre`/`avatar`/`puntaje_lindura` reales — reemplazados por placeholders de misterio (`"❓"`, `"Alguien"`) que el frontend muestra tal cual
+- `{"type": "resultado_levante", "npc_id": "...", "exito": true, "puntaje_lindura": 7, "dado_total": 14}` → push al `jugador_objetivo` al resolver el intento, siempre con el dato real ya revelado
 - `{"type": "narracion", "texto": "..."}` (cuando el DM dispara narración IA)
 
 ### `WS /ws/dm`
 Mensajes que el DM puede enviar:
-- `{"type": "avanzar_fase"}` → previa → boliche → after → terminado. Al avanzar, `npcs_revelados` se vacía y los `zona_actual` de los jugadores vuelven a la primera zona de la fase nueva
+- `{"type": "avanzar_fase"}` → previa → boliche → after → terminado. Al avanzar, `npcs_revelados`, `situacion_actual` y `eventos_usados` de la fase nueva se vacían, y los `zona_actual` de los jugadores vuelven a la primera zona de la fase nueva
 - `{"type": "ajustar_na", "player_id": "...", "delta": 1}`
 - `{"type": "repartir_prenda", "player_id": "...", "prenda_id": 7}` (o `null` para random del mazo)
 - `{"type": "resolver_prenda", "player_id": "...", "prenda_id": 7}`
 - `{"type": "mover_jugador", "player_id": "...", "zona": "barra"}` → cambia `zona_actual` de ese jugador (debe ser una zona válida de `data/mapa.json` para la fase activa)
-- `{"type": "revelar_npc", "npc_id": "martina", "zona": "barra"}` → agrega el NPC a `npcs_revelados`, dispara `npc_revelado` a todos los jugadores
+- `{"type": "revelar_npc", "npc_id": "martina", "zona": "barra"}` (NPC ambiente, sin cambios) o `{"type": "revelar_npc", "modo": "random"}` (elige uno no revelado todavía de la fase activa) → agrega el NPC a `npcs_revelados`, dispara `npc_revelado` a todos los jugadores
+- `{"type": "revelar_npc_encuentro", "npc_id": "...", "jugador_objetivo": "...", "modo": "random"|"elegir"}` → para NPCs `"levante"`/`"confrontacion"`: agrega el NPC a `npcs_revelados` con ese `jugador_objetivo`, dispara `npc_revelado` **solo a ese jugador** (no broadcast). Con `"modo": "random"` el server elige el NPC entre los no usados de tipo levante/confrontación de la fase activa; con `"elegir"` se manda también `npc_id`
 - `{"type": "ocultar_npc", "npc_id": "martina"}` → saca al NPC de `npcs_revelados` (para corregir un error del DM, no una mecánica de juego)
+- `{"type": "siguiente_situacion", "modo": "random"}` o `{"type": "siguiente_situacion", "modo": "elegir", "titulo": "DNI dudoso"}` → fija `situacion_actual` a ese evento de `eventos.json` (filtrado por fase activa), lo agrega a `eventos_usados[fase]`, y lo empuja a todos los jugadores dentro de su próximo `estado`
 - `{"type": "narrar_ia", "prompt_extra": "el Intenso acaba de fallar una tirada de Carisma feo"}` → server arma el prompt con contexto (fase actual, jugador, evento) y llama a Ollama
 
 Mensajes que el DM recibe (push del server):
-- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "log_eventos": [...]}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs)
+- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "situacion_actual": {...} | null, "log_eventos": [...]}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs). El DM siempre ve el `npc` completo en `npcs_revelados` (sin el misterio — el misterio es solo del lado del jugador que no debe saber)
 
 ---
 
@@ -526,7 +668,12 @@ sumados, "cualquiera de los dos" sería demasiado frecuente, ~31% de las
 tiradas en vez del ~17% original).
 
 Dificultades de referencia para el DM (no automatizadas — el DM las dice en
-voz alta antes de la tirada): 4 fácil, 5 normal, 6 difícil, 7+ muy difícil.
+voz alta antes de la tirada, contra el `total` de la tirada). **Recalibradas
+acá** respecto a la versión original del documento (esas cifras — 4/5/6/7+
+— estaban pensadas para 1d6 + stat, quedaron obsoletas desde que la tirada
+pasó a ser 2d6 + stat, sección 2): **10 fácil · 13 normal · 16 difícil ·
+19+ muy difícil**. Mismo número que usa `dificultad_chamuyo` en NPCs de
+levante (sección 5.5).
 
 ---
 
@@ -606,8 +753,10 @@ Ir en este orden — cada milestone es jugable/testeable antes de pasar al sigui
 7. **Modo Caos:** cuando `na >= 3`, el jugador ve destacado en su pantalla su Modo Caos (nombre, efecto, consecuencia) para que sepa que está activo.
 8. **Mapa por fase:** `/dm` muestra las zonas de la fase activa (`data/mapa.json`) con los jugadores ubicados en su `zona_actual`. El DM puede mover un jugador de zona con un click/dropdown. En `/jugador`, un botón "🗺️ ¿Qué está pasando?" abre el mapa simplificado (mismas zonas, mismos jugadores) — todavía sin NPCs.
 9. **Cartas de NPC:** el DM elige un NPC del mazo de la fase (`data/npcs.json`) y lo revela en una zona. Aparece como marcador en el mapa del DM y como carta (nombre, apodo, avatar, frase) en el celu de todos los jugadores a la vez, con botones "Hablar"/"Ignorar" que solo cierran la carta. Aplicar acá la estética neon boliche de la sección 5.7 a las pantallas de mapa y carta.
-10. **Ollama:** botón "Narrar con IA" en el panel del DM, con un campo de texto libre para dar contexto extra, muestra el resultado y lo puede broadcastear a todos o solo leerlo él.
-11. **Pulido:** aplicar los design tokens de la sección 5.7 (fondo oscuro, acentos cian/rosa/violeta) al resto de `/dm` y `/jugador` que quedó con el estilo básico de los primeros milestones, manteniendo mobile-first en `/jugador` (esto lo van a mirar todos en el celu con poca luz y varios tragos encima — tipografía grande, botones grandes, alto contraste).
+10. **Situación actual con opciones:** en `/dm`, reemplazar la lista estática de eventos del milestone 6 por un picker de "situación actual" — botón "🎲 Aleatoria" (no repetida en la fase) o elegir una puntual de la lista, con `eventos_usados` llevando la cuenta. La situación activa se empuja a todos los jugadores. Si el evento tiene `opciones` (sección 5.8), el jugador ve esas opciones en vez de sus 5 stats libres y al elegir una dispara `tirar_dado` con el stat correspondiente; si no tiene `opciones`, se comporta como hoy.
+11. **Encuentros de NPC por turnos (levante/confrontación):** `data/npcs.json` gana los tipos `"levante"` y `"confrontacion"` (sección 5.5). El DM asigna el encuentro a un jugador específico (random o elegido) — llega dirigido solo a ese jugador, no a todos. Levante: tirada de Carisma vs `dificultad_chamuyo`, con el `puntaje_lindura` oculto si el jugador tiene NA alto (misterio, sección 2) y revelado siempre al resolver. Confrontación: el jugador elige una opción de enfoque (pelear/convencer/sobornar) igual que en el milestone 10. El contenido real de estos NPCs (quiénes son, sus dificultades) se define aparte — este milestone es la mecánica, no el contenido.
+12. **Ollama:** botón "Narrar con IA" en el panel del DM, con un campo de texto libre para dar contexto extra, muestra el resultado y lo puede broadcastear a todos o solo leerlo él.
+13. **Pulido:** aplicar los design tokens de la sección 5.7 (fondo oscuro, acentos cian/rosa/violeta) al resto de `/dm` y `/jugador` que quedó con el estilo básico de los primeros milestones, manteniendo mobile-first en `/jugador` (esto lo van a mirar todos en el celu con poca luz y varios tragos encima — tipografía grande, botones grandes, alto contraste).
 
 No paralelizar estos pasos — cada uno depende del anterior y es mejor
 tener algo jugable temprano por si hay que cortar el desarrollo antes de

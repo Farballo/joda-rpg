@@ -22,16 +22,44 @@
 
   <div id="pantalla-espera" class="oculto">
     <p>Estás en la partida, <strong id="nombre-confirmado"></strong>.</p>
+    <p>Fase: <strong id="fase-actual">-</strong></p>
 
     <h2>Nivel de Alcohol</h2>
     <div class="na-meter"><div class="na-fill" id="na-fill"></div></div>
     <p id="na-label"></p>
+
+    <div id="modo-caos" class="oculto"></div>
+
+    <h2>Prenda</h2>
+    <div id="prendas-activas"></div>
 
     <h2>Tirar dado</h2>
     <div id="stats"></div>
 
     <div id="resultado-tirada" class="oculto">
       <p id="resultado-texto"></p>
+    </div>
+
+    <button id="btn-toggle-mapa" type="button">🗺️ ¿Qué está pasando?</button>
+
+    <div id="vista-mapa" class="oculto">
+      <h2>Mapa — <span id="mapa-fase-nombre"></span></h2>
+      <div id="mapa-zonas-jugador"></div>
+      <button id="btn-cerrar-mapa" type="button">← Volver a la partida</button>
+    </div>
+  </div>
+
+  <div id="npc-card-overlay" class="oculto">
+    <div class="npc-card-popup">
+      <div class="npc-card-avatar" id="npc-card-avatar"></div>
+      <div class="eyebrow">NUEVO PERSONAJE</div>
+      <h2 id="npc-card-nombre"></h2>
+      <p class="npc-card-apodo" id="npc-card-apodo"></p>
+      <p id="npc-card-frase"></p>
+      <div class="npc-card-actions">
+        <button id="btn-npc-hablar" type="button">Hablar</button>
+        <button id="btn-npc-ignorar" type="button">Ignorar</button>
+      </div>
     </div>
   </div>
 

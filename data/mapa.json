@@ -1,0 +1,21 @@
+{
+  "previa": [
+    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
+    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
+    { "id": "bano", "nombre": "Baño", "emoji": "🚪" },
+    { "id": "balcon", "nombre": "Balcón", "emoji": "🌙" }
+  ],
+  "boliche": [
+    { "id": "pista", "nombre": "Pista", "emoji": "🪩" },
+    { "id": "barra", "nombre": "Barra", "emoji": "🍸" },
+    { "id": "vip", "nombre": "VIP", "emoji": "⭐" },
+    { "id": "banos", "nombre": "Baños", "emoji": "🚻" },
+    { "id": "entrada", "nombre": "Entrada", "emoji": "🚪" }
+  ],
+  "after": [
+    { "id": "living", "nombre": "Living", "emoji": "🛋️" },
+    { "id": "cocina", "nombre": "Cocina", "emoji": "🍕" },
+    { "id": "terraza", "nombre": "Terraza", "emoji": "🌆" },
+    { "id": "cuarto", "nombre": "Cuarto", "emoji": "🛏️" }
+  ]
+}

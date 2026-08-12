@@ -22,11 +22,32 @@ const NOMBRES_NA = [
 ];
 const NA_MAX = 10;
 
+const NOMBRES_FASE = { previa: "Previa", boliche: "Boliche", after: "After", terminado: "Terminado" };
+
 let ws = null;
+let prendas = [];
+let mapa = {};
+let npcs = [];
+let personajeActual = null;
 
 async function cargarPersonajes() {
   const res = await fetch("/data/personajes.json");
   return res.json();
+}
+
+async function cargarPrendas() {
+  const res = await fetch("/data/prendas.json");
+  prendas = await res.json();
+}
+
+async function cargarMapa() {
+  const res = await fetch("/data/mapa.json");
+  mapa = await res.json();
+}
+
+async function cargarNpcs() {
+  const res = await fetch("/data/npcs.json");
+  npcs = await res.json();
 }
 
 function renderPersonajes(personajes) {
@@ -95,6 +116,105 @@ function actualizarNa(na) {
   document.getElementById("na-label").textContent = `NA ${na} / ${NA_MAX} — ${NOMBRES_NA[na]}`;
 }
 
+function renderModoCaos(activo) {
+  const cont = document.getElementById("modo-caos");
+
+  if (!activo || !personajeActual) {
+    cont.classList.add("oculto");
+    cont.innerHTML = "";
+    return;
+  }
+
+  const mc = personajeActual.modo_caos;
+  cont.classList.remove("oculto");
+  cont.innerHTML = `
+    <div class="eyebrow">MODO CAOS ACTIVO</div>
+    <h2>${mc.nombre}</h2>
+    <p>${mc.efecto}</p>
+    <p class="consecuencia"><strong>Consecuencia:</strong> ${mc.consecuencia}</p>
+  `;
+}
+
+function resolverPrenda(prendaId) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "resolver_prenda", prenda_id: Number(prendaId) }));
+}
+
+function renderPrendas(prendaIds) {
+  const cont = document.getElementById("prendas-activas");
+
+  if (!prendaIds.length) {
+    cont.innerHTML = "<p>Sin prenda activa.</p>";
+    return;
+  }
+
+  cont.innerHTML = prendaIds
+    .map((id) => {
+      const p = prendas.find((p) => p.id === id);
+      return `
+      <div class="prenda-card">
+        <div class="prenda-title">${p ? p.nombre : `#${id}`}</div>
+        <p>${p ? p.efecto : ""}</p>
+        <button type="button" class="btn-resolver-prenda" data-prenda="${id}">Ya la cumplí — Resolver</button>
+      </div>`;
+    })
+    .join("");
+
+  cont.querySelectorAll(".btn-resolver-prenda").forEach((btn) => {
+    btn.addEventListener("click", () => resolverPrenda(btn.dataset.prenda));
+  });
+}
+
+function renderMapaJugador(fase, jugadoresEnMapa, npcsRevelados, miPlayerId) {
+  document.getElementById("mapa-fase-nombre").textContent = NOMBRES_FASE[fase] || fase;
+
+  const cont = document.getElementById("mapa-zonas-jugador");
+  const zonasFase = mapa[fase] || [];
+
+  if (!zonasFase.length) {
+    cont.innerHTML = "<p>Sin mapa para esta fase.</p>";
+    return;
+  }
+
+  cont.innerHTML = zonasFase
+    .map((z) => {
+      const enZona = jugadoresEnMapa.filter((j) => j.zona_actual === z.id);
+      const npcsEnZona = Object.entries(npcsRevelados).filter(([, info]) => info.zona === z.id);
+
+      const tokensHtml = enZona.length
+        ? enZona
+            .map((j) => `<span class="token-jugador">${j.nombre}${j.player_id === miPlayerId ? " (vos)" : ""}</span>`)
+            .join("")
+        : `<span class="zona-vacia">—</span>`;
+
+      const npcsHtml = npcsEnZona
+        .map(([npcId]) => {
+          const n = npcs.find((n) => n.id === npcId);
+          return `<span class="token-npc">${n ? `${n.avatar} ${n.nombre}` : npcId}</span>`;
+        })
+        .join("");
+
+      return `
+      <div class="zona-card">
+        <div class="zona-header">${z.emoji} ${z.nombre}</div>
+        <div class="zona-tokens">${tokensHtml}${npcsHtml}</div>
+      </div>`;
+    })
+    .join("");
+}
+
+function mostrarCartaNpc(npc) {
+  document.getElementById("npc-card-avatar").textContent = npc.avatar;
+  document.getElementById("npc-card-nombre").textContent = npc.nombre;
+  document.getElementById("npc-card-apodo").textContent = npc.apodo;
+  document.getElementById("npc-card-frase").textContent = `"${npc.frase_reveal}"`;
+  document.getElementById("npc-card-overlay").classList.remove("oculto");
+}
+
+function ocultarCartaNpc() {
+  document.getElementById("npc-card-overlay").classList.add("oculto");
+}
+
 function conectarWsJugador(playerId) {
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${protocolo}://${location.host}/ws/player/${playerId}`);
@@ -106,6 +226,13 @@ function conectarWsJugador(playerId) {
     }
     if (msg.type === "estado") {
       actualizarNa(msg.na);
+      renderPrendas(msg.prendas);
+      renderModoCaos(msg.modo_caos_activo);
+      document.getElementById("fase-actual").textContent = NOMBRES_FASE[msg.fase] || msg.fase;
+      renderMapaJugador(msg.fase, msg.jugadores_en_mapa, msg.npcs_revelados, playerId);
+    }
+    if (msg.type === "npc_revelado") {
+      mostrarCartaNpc(msg.npc);
     }
   };
 
@@ -120,11 +247,25 @@ async function mostrarPantallaJuego(nombre, personajeId) {
   document.getElementById("nombre-confirmado").textContent = nombre;
 
   const personajes = await cargarPersonajes();
-  const personaje = personajes.find((p) => p.id === personajeId);
-  renderStats(personaje);
+  personajeActual = personajes.find((p) => p.id === personajeId);
+  renderStats(personajeActual);
+  await cargarPrendas();
+  await cargarMapa();
+  await cargarNpcs();
 }
 
 (async function init() {
+  document.getElementById("btn-toggle-mapa").addEventListener("click", () => {
+    document.getElementById("vista-mapa").classList.remove("oculto");
+  });
+
+  document.getElementById("btn-cerrar-mapa").addEventListener("click", () => {
+    document.getElementById("vista-mapa").classList.add("oculto");
+  });
+
+  document.getElementById("btn-npc-hablar").addEventListener("click", ocultarCartaNpc);
+  document.getElementById("btn-npc-ignorar").addEventListener("click", ocultarCartaNpc);
+
   const playerIdGuardado = localStorage.getItem("player_id");
   const nombreGuardado = localStorage.getItem("nombre");
   const personajeIdGuardado = localStorage.getItem("personaje_id");
