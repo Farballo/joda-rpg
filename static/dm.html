@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Joda RPG — Panel del DM</title>
+  <title>Nochero — Panel del DM</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="pagina-dm" data-fase="previa">
   <header class="dm-topbar" id="topbar-simple">
     <div>
-      <div class="dm-logo">JODA RPG</div>
+      <div class="dm-logo">NOCHERO</div>
       <div class="dm-sub">Panel del DM</div>
     </div>
     <div class="dm-topbar-right">
@@ -26,37 +26,41 @@
   </div>
 
   <div class="pantalla-configuracion oculto" id="pantalla-configuracion">
-    <section class="dm-card">
-      <h2>🗺️ Mapas por fase</h2>
-      <p>Elegí qué variantes de mapa pueden salir en cada fase. Tiene que quedar al menos una por fase. El mapa se elige acá — durante la partida ya no se puede cambiar.</p>
-      <div id="config-mapas"></div>
-    </section>
+    <h1>Configurando la Noche</h1>
 
-    <section class="dm-card">
-      <h2>📋 Eventos de la noche</h2>
-      <p>Elegí qué situaciones pueden salir en cada fase y en qué orden se listan durante la partida. Las que dejes destildadas no van a aparecer.</p>
-      <div id="config-eventos"></div>
-    </section>
+    <div class="config-columnas">
+      <section class="dm-card">
+        <h2>👥 Jugadores conectados</h2>
+        <p>Se suman solos a medida que entran desde <code>/jugador</code>. También podés agregar uno a mano o sacar a alguien antes de arrancar.</p>
+        <ul id="config-lista-jugadores">
+          <li>Todavía no se unió nadie.</li>
+        </ul>
+        <form id="form-agregar-dummy" class="agregar-dummy-form">
+          <input type="text" id="input-dummy-nombre" placeholder="Nombre del jugador" required>
+          <select id="select-dummy-personaje"></select>
+          <button type="submit">➕ Agregar jugador</button>
+        </form>
+      </section>
 
-    <section class="dm-card">
-      <h2>👥 Jugadores conectados</h2>
-      <p>Se suman solos a medida que entran desde <code>/jugador</code>. También podés agregar uno a mano o sacar a alguien antes de arrancar.</p>
-      <ul id="config-lista-jugadores">
-        <li>Todavía no se unió nadie.</li>
-      </ul>
-      <form id="form-agregar-dummy" class="agregar-dummy-form">
-        <input type="text" id="input-dummy-nombre" placeholder="Nombre del jugador" required>
-        <select id="select-dummy-personaje"></select>
-        <button type="submit">➕ Agregar jugador</button>
-      </form>
-    </section>
+      <section class="dm-card">
+        <h2>🗺️ Mapas por fase</h2>
+        <p>Elegí un mapa para cada fase de la noche. Se elige acá, por nombre — durante la partida ya no se puede cambiar.</p>
+        <div id="config-mapas"></div>
+      </section>
+
+      <section class="dm-card">
+        <h2>📋 Eventos de la noche</h2>
+        <p>Elegí qué situaciones pueden salir en cada fase y en qué orden se listan durante la partida. Las que dejes destildadas no van a aparecer.</p>
+        <div id="config-eventos"></div>
+      </section>
+    </div>
 
     <button id="btn-empezar-partida" type="button">▶️ Empezar partida</button>
   </div>
 
   <div class="dashboard-shell oculto" id="dashboard-shell">
     <header class="dm-topbar-v2" id="topbar-dashboard">
-      <div class="brand"><b>JODA RPG</b> <span>Panel del DM</span></div>
+      <div class="brand"><b>NOCHERO</b> <span>Panel del DM</span></div>
 
       <div class="sala-chip">📶 Sala abierta · <b id="sala-chip-host">-</b> · <span id="sala-chip-conectados">0</span> conectados</div>
 

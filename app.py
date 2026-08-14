@@ -10,19 +10,21 @@ from game_state import (
     ajustar_na,
     avanzar_fase,
     cartas_disponibles,
+    configurar_dificultad_evento,
     configurar_eventos,
     configurar_mapas,
     crear_jugador,
     crear_partida,
     desactivar_debilidad,
+    desglose_stat,
     elegir_opcion_encare,
+    elegir_opcion_situacion,
     expulsar_jugador,
     game_state,
     get_npc,
     get_personaje,
     iniciar_encuentro,
     iniciar_partida,
-    intentar_situacion,
     mover_jugador,
     npcs_revelados_para_jugador,
     ocultar_npc,
@@ -30,10 +32,10 @@ from game_state import (
     repartir_prenda,
     resolver_prenda,
     resolver_ronda_encare,
+    resolver_situacion_pendiente,
     retroceder_fase,
     revelar_npc,
     siguiente_situacion,
-    stat_efectivo,
 )
 
 app = FastAPI()
@@ -64,6 +66,7 @@ def estado_completo_msg():
         "mapa_actual": game_state["mapa_actual"],
         "mapas_habilitados": game_state["mapas_habilitados"],
         "eventos_habilitados": game_state["eventos_habilitados"],
+        "dificultades_personalizadas": game_state["dificultades_personalizadas"],
     }
 
 
@@ -403,6 +406,31 @@ async def ws_dm(websocket: WebSocket):
                 await enviar_estado_jugador(jugador_objetivo)
                 await broadcast_estado_dm()
 
+            elif msg.get("type") == "resolver_situacion_pendiente":
+                try:
+                    resultado = resolver_situacion_pendiente(msg.get("modificador_dm", 0))
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
+                player_id = resultado["player_id"]
+                situacion_titulo = game_state["situacion_actual"]["titulo"]
+                opcion = resultado["opcion"]
+                contexto = f"{situacion_titulo} — {opcion}" if opcion else situacion_titulo
+                registrar_tirada(
+                    player_id, resultado["stat"], {**resultado, "total": resultado["total_ajustado"]}, contexto
+                )
+
+                ws_jugador = player_connections.get(player_id)
+                if ws_jugador is not None:
+                    try:
+                        await ws_jugador.send_json({"type": "resultado_situacion", **resultado})
+                    except Exception:
+                        player_connections.pop(player_id, None)
+
+                await broadcast_estado_todos_jugadores()
+                await broadcast_estado_dm()
+
             elif msg.get("type") == "ocultar_npc":
                 ocultar_npc(msg.get("npc_id"))
                 await broadcast_estado_todos_jugadores()
@@ -416,6 +444,15 @@ async def ws_dm(websocket: WebSocket):
                     continue
 
                 await broadcast_estado_todos_jugadores()
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "configurar_dificultad_evento":
+                try:
+                    configurar_dificultad_evento(msg.get("titulo"), msg.get("dificultad"))
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
                 await broadcast_estado_dm()
 
             elif msg.get("type") == "narrar_ia":
@@ -454,7 +491,8 @@ async def ws_player(websocket: WebSocket, player_id: str):
                     continue
 
                 contexto = msg.get("contexto")
-                resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
+                desglose = desglose_stat(jugador, personaje, stat)
+                resultado = {**dice.tirar(jugador["na"], stat, desglose["stat_valor"]), **desglose}
                 registrar_tirada(player_id, stat, resultado, contexto)
 
                 await websocket.send_json({"type": "resultado_tirada", "stat": stat, "contexto": contexto, **resultado})
@@ -486,20 +524,17 @@ async def ws_player(websocket: WebSocket, player_id: str):
                 await enviar_estado_jugador(player_id)
                 await broadcast_estado_dm()
 
-            elif msg.get("type") == "intentar_situacion":
+            elif msg.get("type") == "elegir_opcion_situacion":
                 stat = msg.get("stat")
                 opcion = msg.get("opcion")
                 try:
-                    resultado = intentar_situacion(player_id, stat, opcion)
+                    elegir_opcion_situacion(player_id, stat, opcion)
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                situacion_titulo = game_state["situacion_actual"]["titulo"]
-                contexto = f"{situacion_titulo} — {opcion}" if opcion else situacion_titulo
-                registrar_tirada(player_id, resultado["stat"], resultado, contexto)
-
-                await websocket.send_json({"type": "resultado_situacion", **resultado})
+                # todavía no se tira nada: el jugador dice su frase en voz alta y el DM
+                # la juzga con "resolver_situacion_pendiente" (WS /ws/dm), que sí tira
                 await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
     except WebSocketDisconnect:

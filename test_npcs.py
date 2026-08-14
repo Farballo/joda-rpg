@@ -1,6 +1,6 @@
 """Flujo unificado de NPCs: revelar (global) y, aparte, iniciar encuentro (dirigido).
 
-Ver plan_joda_rpg.md secciones 2, 5.5 y 7. Todo pasa por el WebSocket del DM /
+Ver plan_nochero.md secciones 2, 5.5 y 7. Todo pasa por el WebSocket del DM /
 del jugador, que es como se usa de verdad.
 """
 

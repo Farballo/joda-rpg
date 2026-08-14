@@ -1,15 +1,8 @@
-Que mas alla de lo que elija el DM te aparezca el resultado de los dados, hoy tocas y no ves cuanto salio
-
 Que no te deje revelar otro hasta que no se resuelva el en curso
-
-Dificultad de un evento configurable por el DM (stat y puntaje)
 
 Como se gestiona las tiradas y si lo vencen/conquistan o fallan
 
-que en tirada te aparezca el desglose de dado 1 + dado 2 + stat + otros
 Sonidos y animaciones.
-
-las opciones tienen que tener distintos stats. Te tiene que decir la dificultad y cuando resolves quiero que diga cuanto salio en el dado y el dm lo vea en el historial de tirada
 
 Si se te sale que puedas hacer un resume o entrar con el mismo nombre que ya estabas
 

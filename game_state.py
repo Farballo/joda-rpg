@@ -89,11 +89,19 @@ def estado_inicial() -> dict:
         "eventos_usados": {"previa": [], "boliche": [], "after": []},  # títulos ya mostrados, por fase
         "log_eventos": [],
         "mapa_actual": elegir_mapa_random("previa"),  # {"id", "nombre", "zonas"} — variante de data/mapa.json en uso
-        # variantes de mapa.json habilitadas por fase, configurable en el lobby previo a la partida
-        "mapas_habilitados": {fase: [v["id"] for v in variantes] for fase, variantes in MAPA.items()},
+        # variante de mapa.json elegida por fase, configurable en el lobby previo a la
+        # partida — como máximo una por fase (se guarda como lista de 0 o 1 elemento
+        # para no tener que tocar elegir_mapa_random/_aplicar_mapa, que ya trabajan con listas)
+        "mapas_habilitados": {fase: [variantes[0]["id"]] for fase, variantes in MAPA.items() if variantes},
         # títulos de eventos.json habilitados por fase, en el orden en que se listan durante la partida,
         # configurable en el lobby previo a la partida
         "eventos_habilitados": {fase: [e["titulo"] for e in eventos_lista] for fase, eventos_lista in EVENTOS.items()},
+        # dificultad a medida del DM por evento, por fase — "<titulo>": N pisa la
+        # dificultad de referencia de ese evento en data/eventos.json. Se configura
+        # durante la partida (rueda ⚙️ en cada tarjeta), no en el lobby como las dos de
+        # arriba, y sobrevive a los cambios de fase (si el DM vuelve a una fase con
+        # retroceder_fase, la personalización sigue ahí)
+        "dificultades_personalizadas": {fase: {} for fase in EVENTOS},
     }
 
 
@@ -112,13 +120,17 @@ def iniciar_partida() -> None:
 
 
 def configurar_mapas(config: dict[str, list[str]]) -> None:
+    """Como máximo un mapa por fase: el DM elige uno solo (dropdown por nombre en el
+    panel), no una lista de variantes habilitadas entre las que se sortea."""
     for fase, ids in config.items():
         if fase not in MAPA:
             raise ValueError(f"fase inválida: {fase}")
         validos = {v["id"] for v in MAPA[fase]}
         ids_filtrados = [i for i in ids if i in validos]
         if not ids_filtrados:
-            raise ValueError(f"tenés que dejar al menos un mapa habilitado para la fase {fase}")
+            raise ValueError(f"tenés que elegir un mapa para la fase {fase}")
+        if len(ids_filtrados) > 1:
+            raise ValueError(f"solo puede haber un mapa elegido por fase ({fase})")
         game_state["mapas_habilitados"][fase] = ids_filtrados
 
     fase_actual = game_state["fase"]
@@ -176,12 +188,25 @@ def get_personaje(personaje_id: str) -> dict | None:
     return next((p for p in PERSONAJES if p["id"] == personaje_id), None)
 
 
-def stat_efectivo(jugador: dict, personaje: dict, stat: str) -> int:
-    valor = personaje["stats"][stat]
+def desglose_stat(jugador: dict, personaje: dict, stat: str) -> dict:
+    """Como `stat_efectivo`, pero además devuelve de dónde sale ese número: el stat
+    base del personaje, y si la debilidad activa lo está afectando (y con qué
+    modificador) — para poder mostrar el desglose completo de una tirada en pantalla,
+    no solo el valor final ya sumado.
+    """
+    stat_base = personaje["stats"][stat]
     debilidad = personaje["debilidad"]
-    if jugador["debilidad_activa"] and debilidad["stat"] == stat:
-        valor += debilidad["modificador"]
-    return valor
+    debilidad_aplica = jugador["debilidad_activa"] and debilidad["stat"] == stat
+    return {
+        "stat_valor": stat_base + (debilidad["modificador"] if debilidad_aplica else 0),
+        "stat_base": stat_base,
+        "debilidad_nombre": debilidad["nombre"] if debilidad_aplica else None,
+        "debilidad_modificador": debilidad["modificador"] if debilidad_aplica else None,
+    }
+
+
+def stat_efectivo(jugador: dict, personaje: dict, stat: str) -> int:
+    return desglose_stat(jugador, personaje, stat)["stat_valor"]
 
 
 def activar_debilidad(player_id: str) -> None:
@@ -455,7 +480,8 @@ def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
 
     jugador = game_state["jugadores"][player_id]
     personaje = get_personaje(jugador["personaje_id"])
-    resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
+    desglose = desglose_stat(jugador, personaje, stat)
+    resultado = {**dice.tirar(jugador["na"], stat, desglose["stat_valor"]), **desglose}
     total_ajustado = resultado["total"] + modificador_dm
 
     encuentro["pendiente"] = None
@@ -505,6 +531,22 @@ def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
     return respuesta_final
 
 
+def configurar_dificultad_evento(titulo: str, dificultad: int | None) -> None:
+    """Personaliza la dificultad de un evento puntual de la fase actual — la rueda ⚙️
+    de cada tarjeta en el panel del DM. `dificultad=None` la restablece a la de
+    referencia de `data/eventos.json`. Se guarda por fase y sobrevive a los cambios de
+    fase; no toca el dato original del archivo.
+    """
+    fase = game_state["fase"]
+    if not any(e["titulo"] == titulo for e in EVENTOS.get(fase, [])):
+        raise ValueError(f"titulo inválido para la fase {fase}: {titulo}")
+
+    if dificultad is None:
+        game_state["dificultades_personalizadas"][fase].pop(titulo, None)
+    else:
+        game_state["dificultades_personalizadas"][fase][titulo] = dificultad
+
+
 def siguiente_situacion(modo: str, titulo: str | None = None) -> dict:
     fase = game_state["fase"]
     habilitados = set(game_state["eventos_habilitados"].get(fase, []))
@@ -523,19 +565,43 @@ def siguiente_situacion(modo: str, titulo: str | None = None) -> dict:
     else:
         raise ValueError(f"modo inválido: {modo}")
 
-    situacion = {**evento, "resuelta": False, "resuelta_por": None, "exito": None, "opcion_elegida": None}
+    dificultad_custom = game_state["dificultades_personalizadas"].get(fase, {}).get(evento["titulo"])
+
+    situacion = {
+        "resuelta": False,
+        "resuelta_por": None,
+        "exito": None,
+        "opcion_elegida": None,
+        # igual que en los encuentros: la elección del jugador queda acá hasta que el
+        # DM la juzgue con `resolver_situacion_pendiente` — ver esa función
+        "pendiente": None,
+        **evento,
+        "dificultad": dificultad_custom if dificultad_custom is not None else evento["dificultad"],
+    }
     game_state["situacion_actual"] = situacion
     if evento["titulo"] not in game_state["eventos_usados"][fase]:
         game_state["eventos_usados"][fase].append(evento["titulo"])
     return situacion
 
 
-def intentar_situacion(player_id: str, stat: str, opcion: str | None = None) -> dict:
+def elegir_opcion_situacion(player_id: str, stat: str, opcion: str | None = None) -> dict:
+    """Primer paso de una situación de fase: el jugador elige qué opción/stat intenta.
+
+    Mismo patrón de dos pasos que el encare (`elegir_opcion_encare`): todavía no tira
+    los dados — a la mesa, el jugador dice su frase/movida en voz alta, y recién cuando
+    el DM la escucha y juzga con `resolver_situacion_pendiente` (que aplica un
+    `modificador_dm`) se tira de verdad. Deja la elección en `situacion["pendiente"]`.
+    """
+    if player_id not in game_state["jugadores"]:
+        raise ValueError(f"player_id inválido: {player_id}")
+
     situacion = game_state["situacion_actual"]
     if situacion is None:
         raise ValueError("No hay ninguna situación activa")
     if situacion["resuelta"]:
         raise ValueError("Esta situación ya fue resuelta")
+    if situacion["pendiente"] is not None:
+        raise ValueError("Ya hay alguien esperando que el DM juzgue esta situación")
 
     if opcion == OTRO_OPCION:
         if stat not in STATS_JUGABLES:
@@ -545,12 +611,32 @@ def intentar_situacion(player_id: str, stat: str, opcion: str | None = None) -> 
         if stat not in stats_definidos:
             raise ValueError(f"stat inválido para esta situación: {stat}")
 
+    situacion["pendiente"] = {"player_id": player_id, "stat": stat, "opcion": opcion}
+    return {"player_id": player_id, "stat": stat, "opcion": opcion}
+
+
+def resolver_situacion_pendiente(modificador_dm: int = 0) -> dict:
+    """Segundo paso: el DM juzga cómo estuvo lo que dijo el jugador y tira los dados,
+    con `modificador_dm` como bonus/malus a esa tirada puntual — mismo mecanismo que
+    `resolver_ronda_encare`, no toca la `dificultad` de la situación en sí.
+    """
+    situacion = game_state["situacion_actual"]
+    if situacion is None:
+        raise ValueError("No hay ninguna situación activa")
+    pendiente = situacion["pendiente"]
+    if pendiente is None:
+        raise ValueError("Todavía no hay nadie esperando resolución del DM para esta situación")
+
+    player_id, stat, opcion = pendiente["player_id"], pendiente["stat"], pendiente["opcion"]
     jugador = game_state["jugadores"][player_id]
     personaje = get_personaje(jugador["personaje_id"])
 
-    resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
-    exito = resultado["total"] >= situacion["dificultad"]
+    desglose = desglose_stat(jugador, personaje, stat)
+    resultado = {**dice.tirar(jugador["na"], stat, desglose["stat_valor"]), **desglose}
+    total_ajustado = resultado["total"] + modificador_dm
+    exito = total_ajustado >= situacion["dificultad"]
 
+    situacion["pendiente"] = None
     situacion["resuelta"] = True
     situacion["resuelta_por"] = jugador["nombre"]
     situacion["exito"] = exito
@@ -558,7 +644,16 @@ def intentar_situacion(player_id: str, stat: str, opcion: str | None = None) -> 
 
     _registrar_resultado(player_id, "situacion", situacion["titulo"], exito, 1 if exito else 0)
 
-    return {**resultado, "stat": stat, "exito": exito, "dificultad": situacion["dificultad"]}
+    return {
+        **resultado,
+        "modificador_dm": modificador_dm,
+        "total_ajustado": total_ajustado,
+        "stat": stat,
+        "exito": exito,
+        "dificultad": situacion["dificultad"],
+        "player_id": player_id,
+        "opcion": opcion,
+    }
 
 
 def _aplicar_mapa(mapa: dict) -> None:
@@ -606,4 +701,14 @@ def registrar_tirada(player_id: str, stat: str, resultado: dict, contexto: str |
         "tipo": resultado["tipo"],
         "dados_tirados": resultado["dados_tirados"],
         "total": resultado["total"],
+        # desglose para el log del DM (sección "Tiradas en vivo"): no todas las
+        # tiradas tienen todos estos campos (una libre no tiene modificador_dm, por
+        # ejemplo, y stat_base/debilidad_* solo están si vienen de desglose_stat)
+        "suma_dados": resultado.get("suma_dados"),
+        "stat_valor": resultado.get("stat_valor"),
+        "stat_base": resultado.get("stat_base"),
+        "modificador_na": resultado.get("modificador_na"),
+        "modificador_dm": resultado.get("modificador_dm"),
+        "debilidad_nombre": resultado.get("debilidad_nombre"),
+        "debilidad_modificador": resultado.get("debilidad_modificador"),
     })

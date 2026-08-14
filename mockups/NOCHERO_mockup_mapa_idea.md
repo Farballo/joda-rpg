@@ -76,7 +76,7 @@ Esta sería probablemente la pantalla más espectacular de /dm.
 Algo así:
 
 ┌─────────────────────────────────────────────────────────────┐
-│ JODA RPG                         BOLICHE       02:43        │
+│ NOCHERO                          BOLICHE       02:43        │
 │                                                             │
 │ ┌───────────────────────────────────────┐  ┌─────────────┐ │
 │ │                                       │  │ SITUACIÓN   │ │

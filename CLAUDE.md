@@ -4,10 +4,10 @@ Este archivo guía a Claude Code al trabajar en este repo.
 
 ## Qué es este proyecto
 
-Una app web para jugar un juego de rol de una noche ("joda-rpg") entre
+Una app web para jugar un juego de rol de una noche ("Nochero") entre
 amigos, en una previa/joda real. Corre 100% local en la notebook del DM,
 en la misma wifi que los jugadores — sin auth, sin base de datos, sin
-deploy externo. Ver **`PLAN_JODA_RPG.md`** en la raíz del repo: es la
+deploy externo. Ver **`plan_nochero.md`** en la raíz del repo: es la
 fuente de verdad de arquitectura, modelo de datos, contrato de WebSockets
 y orden de milestones. Leerlo siempre antes de tocar código si no está
 ya en contexto.
@@ -57,7 +57,7 @@ static/jugador.html      # vista del jugador (mobile-first)
 
 ## Reglas de trabajo
 
-1. **Seguir el orden de milestones de la sección 11 de `PLAN_JODA_RPG.md`.**
+1. **Seguir el orden de milestones de la sección 11 de `plan_nochero.md`.**
    No adelantar milestones ni mezclar trabajo de varios a la vez. Cada
    milestone tiene que quedar corriendo y probable antes de pasar al
    siguiente.

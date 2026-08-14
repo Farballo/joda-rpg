@@ -61,6 +61,7 @@ label {
 }
 
 input[type="text"],
+input[type="number"],
 select,
 textarea {
   background: var(--panel2);
@@ -491,11 +492,6 @@ form#form-join > button[type="submit"] {
   100% { transform: rotate(-4deg); }
 }
 
-.tirada-dados-final {
-  font-size: 2.2rem;
-  margin: 1rem 0 0.5rem;
-}
-
 .tirada-exito {
   font-weight: 700;
   font-size: 1.1rem;
@@ -528,10 +524,45 @@ form#form-join > button[type="submit"] {
   margin: 0.3rem 0 0.75rem;
 }
 
-.encuentro-dado-resultado {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin: 0 0 0.4rem;
+/* desglose de una tirada: cada dado, el stat, la debilidad/NA si afectaron, y la
+   decisión del DM si esta tirada pasó por el juicio en vivo (encares/situaciones).
+   Compartido entre tirar_dado libre, situaciones y encares. */
+.desglose-tirada {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.desglose-tirada li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.desglose-tirada li b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.desglose-total {
+  border-top: 1px solid var(--line);
+  margin-top: 0.15rem;
+  padding-top: 0.45rem;
+  font-weight: 800;
+}
+
+.desglose-total b {
+  font-size: 1.35rem;
+  color: var(--cyan);
 }
 
 .situacion-card {
@@ -539,6 +570,13 @@ form#form-join > button[type="submit"] {
   border: 1px solid var(--yellow);
   border-radius: 12px;
   padding: 0.85rem;
+}
+
+.situacion-dificultad {
+  color: var(--yellow);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0;
 }
 
 #situacion-opciones {
@@ -628,6 +666,14 @@ form#form-join > button[type="submit"] {
 .encuentro-dificultad-botones button:hover {
   background: var(--yellow);
   color: #241a06;
+}
+
+.encuentro-dificultad-botones button {
+  transition: transform 0.1s ease;
+}
+
+.encuentro-dificultad-botones button:active {
+  transform: scale(0.94);
 }
 
 .puntaje-jugador-card {
@@ -748,11 +794,26 @@ form#form-join > button[type="submit"] {
 /* ---- Pantalla de configuración / lobby previo a la partida ---- */
 
 .pantalla-configuracion {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 2rem auto;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+/* jugadores a la izquierda (a medida que se suman), mapas en el medio, eventos a
+   la derecha — mismo orden en el que el DM los va a mirar antes de arrancar */
+.config-columnas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .config-columnas {
+    grid-template-columns: 1fr;
+  }
 }
 
 code {
@@ -762,90 +823,91 @@ code {
   font-size: 0.9em;
 }
 
+/* un solo mapa por fase: nombre + <select>, sin preview de layout */
 .config-mapas-fase {
-  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .config-mapas-fase:last-child {
   margin-bottom: 0;
 }
 
-.config-mapas-fase h3 {
+.config-mapas-fase label {
+  flex: 0 0 90px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.8rem;
-  margin: 0 0 0.6rem;
+  margin-bottom: 0;
 }
 
-.config-mapas-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 0.75rem;
+.config-mapas-fase select {
+  flex: 1;
 }
 
-.mapa-config-card {
-  display: block;
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 0.6rem;
-  cursor: pointer;
-}
-
-.mapa-config-card:has(input:checked) {
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 1px var(--cyan);
-}
-
-.mapa-config-card-nombre {
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin: 0.4rem 0;
-}
-
-.mapa-mini-preview {
-  position: relative;
-  height: 90px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-
-.mapa-mini-zona {
-  position: absolute;
-  border: 1px solid var(--line);
-  background: rgba(16, 16, 25, 0.9);
-  border-radius: 4px;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* plegado por defecto (sin el atributo "open"): el DM tiene que desplegar una fase
+   para poder tocar sus eventos */
 .config-eventos-fase {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 0.9rem;
+  background: var(--panel2);
 }
 
 .config-eventos-fase:last-child {
   margin-bottom: 0;
 }
 
-.config-eventos-fase-head {
+.config-eventos-fase-resumen {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
+  gap: 0.6rem;
+  padding: 0.7rem 0;
+  cursor: pointer;
+  list-style: none;
 }
 
-.config-eventos-fase-head h3 {
+.config-eventos-fase-resumen::-webkit-details-marker {
+  display: none;
+}
+
+.config-eventos-fase-resumen::after {
+  content: "▸";
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.config-eventos-fase[open] .config-eventos-fase-resumen::after {
+  transform: rotate(90deg);
+}
+
+.config-eventos-fase-resumen h3 {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.8rem;
   margin: 0;
+}
+
+.config-eventos-fase-contador {
+  margin-left: auto;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.config-eventos-fase-body {
+  padding-bottom: 0.9rem;
+}
+
+.config-eventos-fase-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.6rem;
 }
 
 .btn-seleccionar-todo-eventos {
@@ -1263,10 +1325,6 @@ code {
 }
 
 .evento-fila {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
   padding: 0.45rem 0.6rem;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -1287,6 +1345,67 @@ code {
 .evento-fila small {
   color: var(--muted);
   font-size: 0.71rem;
+}
+
+.evento-fila-cabecera {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.evento-fila-botones {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.evento-fila-botones button {
+  white-space: nowrap;
+}
+
+/* panel inline de "⚙️ configurar dificultad" — a diferencia del menú del riel, este
+   no flota: empuja el resto de la tarjeta hacia abajo, así no se corta en una columna
+   angosta con scroll propio */
+.evento-config {
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+}
+
+.evento-config[data-abierto="true"] {
+  display: flex;
+}
+
+.evento-config label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.evento-config input {
+  width: 84px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.evento-config-botones {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.evento-config-botones button {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 /* ---- columna 2: mapa + tiradas en vivo ---- */
@@ -1480,6 +1599,25 @@ code {
   color: var(--yellow);
 }
 
+/* pop de entrada para lo que se acaba de agregar/activar: una tirada nueva en el log,
+   la situación que se acaba de elegir, el NPC al que se le acaba de asignar turno */
+@keyframes entrada-destacada {
+  0% { transform: scale(0.94); box-shadow: 0 0 0 2px var(--cyan); }
+  60% { transform: scale(1.012); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 226, 210, 0); }
+}
+
+.entrada-destacada {
+  animation: entrada-destacada 0.5s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada-destacada,
+  .na-valor-pop {
+    animation: none;
+  }
+}
+
 /* ---- columna 3: NPCs + narrador IA ---- */
 
 .banner-encuentro {
@@ -1664,6 +1802,16 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+@keyframes na-valor-pop {
+  0% { transform: scale(1.4); color: var(--yellow); }
+  100% { transform: scale(1); color: var(--text); }
+}
+
+.na-valor-pop {
+  display: inline-block;
+  animation: na-valor-pop 0.4s ease;
+}
+
 .na-nombre {
   font-size: 0.7rem;
   color: var(--muted);
@@ -1680,6 +1828,18 @@ code {
 .na-fill-v2 {
   height: 100%;
   border-radius: 999px;
+}
+
+/* el riel se re-renderiza entero (innerHTML) en cada estado nuevo, así que una
+   transition de "width" no tiene de dónde partir — en vez de eso, un pulso de brillo
+   marca que este valor específico acaba de cambiar */
+@keyframes na-fill-pop {
+  0% { filter: brightness(1.8) saturate(1.3); box-shadow: 0 0 10px 1px currentColor; }
+  100% { filter: brightness(1) saturate(1); box-shadow: none; }
+}
+
+.na-fill-pop {
+  animation: na-fill-pop 0.5s ease;
 }
 
 .na-fill-v2[data-tramo="sobrio"] { background: linear-gradient(90deg, #1fb9ae, var(--cyan)); }

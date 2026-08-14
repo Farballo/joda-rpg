@@ -1,4 +1,4 @@
-# Ejecutar Joda RPG en la notebook de otra persona
+# Ejecutar Nochero en la notebook de otra persona
 
 Guía rápida para la noche del evento si el server no lo levanta el mismo
 que tiene el repo clonado.
@@ -23,7 +23,7 @@ y más rápida de armar en el momento.
 
 - Python 3.11+ instalado.
 - (Opcional, para narración IA) [Ollama](https://ollama.com/download)
-  instalado y el modelo bajado — ver sección 9 de `plan_joda_rpg.md`.
+  instalado y el modelo bajado — ver sección 9 de `plan_nochero.md`.
 
 ## 3. Setup e inicio
 
@@ -42,7 +42,7 @@ Windows va a bloquear conexiones entrantes. Regla mínima necesaria
 (PowerShell como administrador):
 
 ```powershell
-New-NetFirewallRule -DisplayName "Joda RPG (puerto 8000)" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+New-NetFirewallRule -DisplayName "Nochero (puerto 8000)" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
 ```
 
 ## 5. Encontrar la IP para que los jugadores se conecten
@@ -68,4 +68,4 @@ de clientes" (AP/client isolation) activado: los dispositivos no se ven
 entre sí aunque estén en la misma red, y ninguna regla de firewall lo
 arregla porque el bloqueo está en el router. Plan B: hotspot del celu del
 DM en vez de la wifi del lugar (ver checklist de la sección 12 de
-`plan_joda_rpg.md`).
+`plan_nochero.md`).

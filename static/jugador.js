@@ -11,6 +11,56 @@ const TEXTO_TIPO = {
   exito_bonus: "¡ÉXITO CON BONUS! ⭐",
 };
 
+// mismos presets que usa el DM para juzgar encares y situaciones — acá solo sirven
+// para traducir el modificador_dm de vuelta a su etiqueta al mostrar el desglose
+const PRESETS_MODIFICADOR_DM = [
+  { label: "🔥 Muy bueno", modificador: 4 },
+  { label: "🙂 Bueno", modificador: 2 },
+  { label: "😐 Normal", modificador: 0 },
+  { label: "😬 Flojo", modificador: -2 },
+  { label: "💀 Muy malo", modificador: -4 },
+];
+
+function etiquetaModificadorDm(modificador) {
+  const preset = PRESETS_MODIFICADOR_DM.find((p) => p.modificador === modificador);
+  return preset ? preset.label : `${modificador >= 0 ? "+" : ""}${modificador}`;
+}
+
+// desglose completo de una tirada: cada dado, el stat con su valor, la debilidad si
+// afectó, el nivel de alcohol si afectó, y la decisión del DM si esta tirada pasó por
+// el juicio en vivo (encares y situaciones) — para que quede clarísimo de dónde sale
+// cada número, no solo el total
+function desgloseTiradaHtml(msg) {
+  const [d1, d2] = msg.dados_tirados;
+  const stat = NOMBRES_STAT[msg.stat] || msg.stat;
+  const filas = [`<li>🎲 Dado 1: <b>${d1}</b></li>`, `<li>🎲 Dado 2: <b>${d2}</b></li>`];
+
+  const statBase = msg.stat_base !== undefined && msg.stat_base !== null ? msg.stat_base : msg.stat_valor;
+  if (statBase !== undefined && statBase !== null) {
+    filas.push(`<li>${stat}: <b>${statBase >= 0 ? "+" : ""}${statBase}</b></li>`);
+  }
+
+  if (msg.debilidad_nombre) {
+    const mod = msg.debilidad_modificador || 0;
+    filas.push(`<li>😵 Debilidad (${msg.debilidad_nombre}): <b>${mod >= 0 ? "+" : ""}${mod}</b></li>`);
+  }
+
+  if (msg.modificador_na) {
+    filas.push(`<li>Nivel de Alcohol: <b>${msg.modificador_na >= 0 ? "+" : ""}${msg.modificador_na}</b></li>`);
+  }
+
+  if (msg.modificador_dm !== undefined && msg.modificador_dm !== null) {
+    filas.push(
+      `<li>🎙️ Decisión del DM (${etiquetaModificadorDm(msg.modificador_dm)}): <b>${msg.modificador_dm >= 0 ? "+" : ""}${msg.modificador_dm}</b></li>`
+    );
+  }
+
+  const totalFinal = msg.total_ajustado !== undefined && msg.total_ajustado !== null ? msg.total_ajustado : msg.total;
+  filas.push(`<li class="desglose-total">Total: <b>${totalFinal}</b></li>`);
+
+  return `<ul class="desglose-tirada">${filas.join("")}</ul>`;
+}
+
 const NOMBRES_NA = [
   "Sobrio", "Sobrio",
   "Alegre", "Alegre",
@@ -162,41 +212,6 @@ async function unirse(nombre, personajeId) {
   return res.json();
 }
 
-function renderStats(personaje) {
-  const cont = document.getElementById("stats");
-  cont.innerHTML = Object.entries(personaje.stats)
-    .map(
-      ([stat, valor]) => `
-      <button type="button" class="btn-stat" data-stat="${stat}">
-        ${NOMBRES_STAT[stat]} (${valor >= 0 ? "+" : ""}${valor})
-      </button>`
-    )
-    .join("");
-
-  cont.querySelectorAll(".btn-stat").forEach((btn) => {
-    btn.addEventListener("click", () => tirarDado(btn.dataset.stat));
-  });
-}
-
-function tirarDado(stat, contexto) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ type: "tirar_dado", stat, contexto: contexto || null }));
-}
-
-function mostrarResultado(msg) {
-  const cont = document.getElementById("resultado-tirada");
-  const texto = document.getElementById("resultado-texto");
-  const extra = TEXTO_TIPO[msg.tipo] || "";
-  const prefijo = msg.contexto ? `${msg.contexto} — ` : "";
-  const exitoTexto = msg.exito === undefined ? "" : msg.exito ? "<br>✅ ¡Lo lograste!" : "<br>❌ No lo lograste.";
-  texto.innerHTML = `
-    ${prefijo}${NOMBRES_STAT[msg.stat]}: sacaste ${msg.dados_tirados[0]} + ${msg.dados_tirados[1]} → total ${msg.total}
-    ${extra ? `<br>${extra}` : ""}
-    ${exitoTexto}
-  `;
-  cont.classList.remove("oculto");
-}
-
 function actualizarNa(na) {
   document.getElementById("na-fill").style.width = `${(na / NA_MAX) * 100}%`;
   document.getElementById("na-label").textContent = `${na} / ${NA_MAX} — ${NOMBRES_NA[na]}`;
@@ -225,10 +240,9 @@ function renderModoCaos(activo) {
 const OTRO_OPCION = "Otro (decide DM)";
 let tiradaAnimacionId = null;
 
-function intentarSituacion(opcion, stat) {
+function elegirOpcionSituacion(opcion, stat) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  mostrarOverlayTirada();
-  ws.send(JSON.stringify({ type: "intentar_situacion", opcion: opcion || null, stat }));
+  ws.send(JSON.stringify({ type: "elegir_opcion_situacion", opcion: opcion || null, stat }));
 }
 
 function mostrarOverlayTirada() {
@@ -259,8 +273,8 @@ function mostrarResultadoSituacion(msg) {
   const extra = TEXTO_TIPO[msg.tipo] || "";
   const exitoTexto = msg.exito ? "✅ ¡Lo lograste!" : "❌ No lo lograste.";
   cont.innerHTML = `
-    <div class="tirada-dados-final">🎲 ${msg.dados_tirados[0]}   🎲 ${msg.dados_tirados[1]}</div>
-    <p>${NOMBRES_STAT[msg.stat]}: total ${msg.total}${extra ? ` — ${extra}` : ""}</p>
+    ${desgloseTiradaHtml(msg)}
+    ${extra ? `<p>${extra}</p>` : ""}
     <p class="tirada-exito">${exitoTexto}</p>
     <button type="button" id="btn-cerrar-tirada">Cerrar</button>
   `;
@@ -272,7 +286,7 @@ function ocultarOverlayTirada() {
   document.getElementById("tirada-overlay").classList.add("oculto");
 }
 
-function renderSituacion(situacion) {
+function renderSituacion(situacion, jugadoresEnMapa) {
   const cont = document.getElementById("situacion-actual");
 
   if (!situacion) {
@@ -283,12 +297,22 @@ function renderSituacion(situacion) {
   cont.classList.remove("oculto");
   document.getElementById("situacion-titulo").textContent = situacion.titulo;
   document.getElementById("situacion-texto").textContent = situacion.texto;
+  document.getElementById("situacion-dificultad").textContent = `🎯 Dificultad ${situacion.dificultad}`;
 
   const opcionesCont = document.getElementById("situacion-opciones");
 
   if (situacion.resuelta) {
     const resultadoTexto = situacion.exito ? "✅ Salió bien" : "❌ Salió mal";
     opcionesCont.innerHTML = `<p class="situacion-resuelta">Resuelta por <strong>${situacion.resuelta_por}</strong> — ${resultadoTexto}</p>`;
+    return;
+  }
+
+  // igual que en un encuentro: alguien ya dijo su frase y el DM todavía no la juzgó —
+  // nadie puede elegir opción mientras tanto (server también lo bloquea)
+  if (situacion.pendiente) {
+    const jugador = (jugadoresEnMapa || []).find((j) => j.player_id === situacion.pendiente.player_id);
+    const nombre = jugador ? jugador.nombre : "Alguien";
+    opcionesCont.innerHTML = `<p class="encuentro-esperando-dm">🎙️ <strong>${nombre}</strong> ya dijo lo suyo — esperando que el DM lo juzgue...</p>`;
     return;
   }
 
@@ -312,7 +336,7 @@ function renderSituacion(situacion) {
 
   opcionesCont.querySelectorAll(".btn-opcion-situacion").forEach((btn) => {
     const opcion = opciones[Number(btn.dataset.idx)];
-    btn.addEventListener("click", () => intentarSituacion(opcion.texto, opcion.stat));
+    btn.addEventListener("click", () => elegirOpcionSituacion(opcion.texto, opcion.stat));
   });
 
   document.getElementById("btn-situacion-otro").addEventListener("click", () => {
@@ -320,7 +344,7 @@ function renderSituacion(situacion) {
   });
 
   opcionesCont.querySelectorAll(".btn-opcion-otro").forEach((btn) => {
-    btn.addEventListener("click", () => intentarSituacion(OTRO_OPCION, btn.dataset.stat));
+    btn.addEventListener("click", () => elegirOpcionSituacion(OTRO_OPCION, btn.dataset.stat));
   });
 }
 
@@ -564,32 +588,48 @@ function renderEncuentro(npcsRevelados) {
   overlay.classList.remove("oculto");
 }
 
-function textoDadoEncare(msg) {
-  const [d1, d2] = msg.dados_tirados;
-  let texto = `🎲 ${d1} + ${d2} → ${msg.total}`;
-  if (msg.modificador_dm) {
-    const signo = msg.modificador_dm >= 0 ? "+" : "";
-    texto += ` (DM ${signo}${msg.modificador_dm} → ${msg.total_ajustado})`;
-  }
-  return texto;
+let encareAnimacionId = null;
+
+/* Mismo ritual visual que cualquier otra tirada (tirar_dado, situaciones): un par de
+   dados girando un momento antes de revelar el desglose — así el encare no se siente
+   distinto al resto solo porque el resultado viene de un mensaje aparte del server. */
+function animarDadosEncare(callback) {
+  const acciones = document.getElementById("encuentro-actions");
+  acciones.innerHTML = `<div class="tirada-dados-rolando" id="encare-dados-animados">🎲 …   🎲 …</div>`;
+
+  let ticks = 0;
+  clearInterval(encareAnimacionId);
+  encareAnimacionId = setInterval(() => {
+    const d1 = 1 + Math.floor(Math.random() * 6);
+    const d2 = 1 + Math.floor(Math.random() * 6);
+    const el = document.getElementById("encare-dados-animados");
+    if (el) el.textContent = `🎲 ${d1}   🎲 ${d2}`;
+    ticks++;
+    if (ticks > 8) {
+      clearInterval(encareAnimacionId);
+      callback();
+    }
+  }, 80);
 }
 
 function mostrarResultadoEncare(msg) {
   mostrandoResultadoEncuentro = true;
-  const dadoTexto = textoDadoEncare(msg);
 
   if (!msg.resuelto) {
+    // antes esto avanzaba solo a los 2 segundos; ahora hay que tocar "Continuar" —
+    // así cada uno lee el desglose (y la mesa reacciona a la tirada) a su propio ritmo
     document.getElementById("encuentro-actions").innerHTML = `
-      <p class="encuentro-dado-resultado">${dadoTexto}</p>
-      <p>${msg.respuesta || ""}</p>`;
-    setTimeout(() => {
+      ${desgloseTiradaHtml(msg)}
+      <p>${msg.respuesta || ""}</p>
+      <button type="button" id="btn-continuar-encuentro">Continuar</button>`;
+    document.getElementById("btn-continuar-encuentro").addEventListener("click", () => {
       mostrandoResultadoEncuentro = false;
       const npc = ultimosNpcsRevelados[msg.npc_id] && ultimosNpcsRevelados[msg.npc_id].encuentro.npc;
       if (npc) {
         encuentroEnPantalla = `${msg.npc_id}:nodo`;
         renderNodoEncuentro(npc, msg.siguiente_nodo);
       }
-    }, 2000);
+    });
     return;
   }
 
@@ -598,7 +638,7 @@ function mostrarResultadoEncare(msg) {
     document.getElementById("encuentro-lindura").innerHTML = `<p class="lindura-valor">Atractivo real: ${msg.puntaje_lindura} / 10</p>`;
   }
   document.getElementById("encuentro-actions").innerHTML = `
-    <p class="encuentro-dado-resultado">${dadoTexto}</p>
+    ${desgloseTiradaHtml(msg)}
     <p>${msg.respuesta ? `${msg.respuesta}<br>` : ""}Acumulado ${msg.acumulado} vs dificultad ${msg.dificultad_total}.</p>
     <p>${exitoTexto}</p>
     <button type="button" id="btn-cerrar-encuentro">Cerrar</button>`;
@@ -668,15 +708,12 @@ function conectarWsJugador(playerId) {
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.type === "resultado_tirada") {
-      mostrarResultado(msg);
-    }
     if (msg.type === "estado") {
       actualizarNa(msg.na);
       renderPrendas(msg.prendas);
       renderModoCaos(msg.modo_caos_activo);
       renderDebilidad(msg.debilidad_activa);
-      renderSituacion(msg.situacion_actual);
+      renderSituacion(msg.situacion_actual, msg.jugadores_en_mapa);
       document.getElementById("fase-actual").textContent = NOMBRES_FASE[msg.fase] || msg.fase;
       aplicarFase(msg.fase);
       renderMapaJugador(msg.mapa_actual, msg.jugadores_en_mapa, msg.npcs_revelados, playerId);
@@ -690,10 +727,14 @@ function conectarWsJugador(playerId) {
       if (npcCardNpcId === msg.npc_id) ocultarCartaNpc();
     }
     if (msg.type === "resultado_encare") {
-      mostrarResultadoEncare(msg);
+      mostrandoResultadoEncuentro = true;
+      animarDadosEncare(() => mostrarResultadoEncare(msg));
     }
     if (msg.type === "resultado_situacion") {
-      mostrarResultadoSituacion(msg);
+      // la espera (el DM juzgando) ya se mostró in-line en la card de la situación;
+      // acá recién arranca el ritual de la tirada, breve, y después el resultado
+      mostrarOverlayTirada();
+      setTimeout(() => mostrarResultadoSituacion(msg), 700);
     }
     if (msg.type === "error") {
       clearInterval(tiradaAnimacionId);
@@ -723,7 +764,6 @@ async function mostrarPantallaJuego(nombre, personajeId) {
   document.getElementById("nombre-confirmado").textContent = nombre;
 
   personajeActual = personajes.find((p) => p.id === personajeId);
-  renderStats(personajeActual);
   renderMiCarta(personajeActual);
   await cargarPrendas();
   await cargarNpcs();

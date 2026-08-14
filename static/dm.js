@@ -23,15 +23,25 @@ const ORDEN_FASES = ["previa", "boliche", "after"];
 
 const NOMBRES_STAT = { carisma: "Carisma", aguante: "Aguante", astucia: "Astucia", suerte: "Suerte" };
 
+// mismo texto que OTRO_OPCION en game_state.py / jugador.js — la opción libre de una
+// situación, donde el DM le dice al jugador qué stat tirar en voz alta
+const OTRO_OPCION_SITUACION = "Otro (decide DM)";
+
 // presets rápidos para juzgar en vivo lo que dijo el jugador: el modificador se suma
-// directo a esa tirada (bonus si estuvo bueno, malus si estuvo flojo)
-const PRESETS_DIFICULTAD_ENCARE = [
+// directo a esa tirada (bonus si estuvo bueno, malus si estuvo flojo). Se usa tanto
+// para rondas de encare como para situaciones de fase — mismo mecanismo en los dos.
+const PRESETS_MODIFICADOR_DM = [
   { label: "🔥 Muy bueno", modificador: 4 },
   { label: "🙂 Bueno", modificador: 2 },
   { label: "😐 Normal", modificador: 0 },
   { label: "😬 Flojo", modificador: -2 },
   { label: "💀 Muy malo", modificador: -4 },
 ];
+
+function etiquetaModificadorDm(modificador) {
+  const preset = PRESETS_MODIFICADOR_DM.find((p) => p.modificador === modificador);
+  return preset ? preset.label : `${modificador >= 0 ? "+" : ""}${modificador}`;
+}
 
 let personajes = [];
 let prendas = [];
@@ -91,6 +101,10 @@ function jugadorEnEncuentro(playerId, npcsRevelados) {
   return enCurso !== null && enCurso.jugador_objetivo === playerId;
 }
 
+// NA de cada jugador la última vez que renderizamos, para poder animar solo el
+// número que cambió (y no todos los del riel) en cada re-render
+const naAnteriorPorJugador = {};
+
 function renderJugadores(jugadores, mapaActual, npcsRevelados) {
   const riel = document.getElementById("riel-jugadores");
   const ids = Object.keys(jugadores);
@@ -107,6 +121,8 @@ function renderJugadores(jugadores, mapaActual, npcsRevelados) {
       const j = jugadores[id];
       const tramo = TRAMOS_NA[j.na];
       const pct = (j.na / NA_MAX) * 100;
+      const naCambio = id in naAnteriorPorJugador && naAnteriorPorJugador[id] !== j.na;
+      naAnteriorPorJugador[id] = j.na;
       const personaje = personajes.find((p) => p.id === j.personaje_id);
       const debilidadNombre = personaje ? personaje.debilidad.nombre : "Debilidad";
       const cartaHtml = personaje ? cartaMiniHtml(personaje) : "";
@@ -160,8 +176,8 @@ function renderJugadores(jugadores, mapaActual, npcsRevelados) {
           <div>
             <div class="jugador-nombre">${j.nombre}</div>
             <div class="jugador-personaje">${nombrePersonaje(j.personaje_id)}</div>
-            <div class="na-linea"><span class="na-valor">NA ${j.na} / ${NA_MAX}</span><span class="na-nombre">${NOMBRES_NA[j.na]}</span></div>
-            <div class="na-barra"><div class="na-fill-v2" data-tramo="${tramo}" style="width:${pct}%"></div></div>
+            <div class="na-linea"><span class="na-valor${naCambio ? " na-valor-pop" : ""}">NA ${j.na} / ${NA_MAX}</span><span class="na-nombre">${NOMBRES_NA[j.na]}</span></div>
+            <div class="na-barra"><div class="na-fill-v2${naCambio ? " na-fill-pop" : ""}" data-tramo="${tramo}" style="width:${pct}%"></div></div>
           </div>
         </div>
 
@@ -292,7 +308,7 @@ function renderEncuentroEnCurso(npcsRevelados, jugadores) {
 
   if (enCurso.pendiente) {
     const statTxt = NOMBRES_STAT[enCurso.pendiente.stat] || enCurso.pendiente.stat;
-    const botonesHtml = PRESETS_DIFICULTAD_ENCARE.map(
+    const botonesHtml = PRESETS_MODIFICADOR_DM.map(
       (p) => `
       <button type="button" data-action="resolver-ronda-encare" data-npc="${enCurso.npcId}" data-modificador="${p.modificador}">
         ${p.label} (${p.modificador > 0 ? "+" : ""}${p.modificador})
@@ -322,6 +338,10 @@ function renderEncuentroEnCurso(npcsRevelados, jugadores) {
     </div>`;
 }
 
+// id del NPC que estaba en curso la última vez que renderizamos — para animar solo
+// la fila que recién arrancó su encuentro, no todas en cada re-render
+let ultimoNpcEnCursoId = undefined;
+
 function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
   const cont = document.getElementById("lista-npcs-revelados");
   const entradas = Object.entries(npcsRevelados || {});
@@ -334,7 +354,11 @@ function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
   }
 
   const zonas = mapaActual.zonas || [];
-  const hayEncuentro = encuentroEnCurso(npcsRevelados) !== null;
+  const enCurso = encuentroEnCurso(npcsRevelados);
+  const hayEncuentro = enCurso !== null;
+  const npcIdEnCurso = enCurso ? enCurso.npcId : null;
+  const esEncuentroNuevo = ultimoNpcEnCursoId !== undefined && npcIdEnCurso !== null && npcIdEnCurso !== ultimoNpcEnCursoId;
+  ultimoNpcEnCursoId = npcIdEnCurso;
   const idsJugadores = Object.keys(jugadores);
   const opcionesJugador = idsJugadores
     .map((id) => `<option value="${id}">${jugadores[id].nombre}</option>`)
@@ -368,8 +392,10 @@ function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
           </div>`
         : "";
 
+      const claseNueva = enCursoEsteNpc && esEncuentroNuevo ? " entrada-destacada" : "";
+
       return `
-      <div class="npc-fila" data-estado="${enCursoEsteNpc ? "encuentro" : ""}">
+      <div class="npc-fila${claseNueva}" data-estado="${enCursoEsteNpc ? "encuentro" : ""}">
         <div class="npc-avatar">${npc ? npc.avatar : "❓"}</div>
         <div>
           <div class="npc-nombre">${npc ? npc.nombre : npcId}</div>
@@ -386,17 +412,8 @@ function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
     .join("");
 }
 
-function renderMiniPreview(variante) {
-  const zonas = variante.zonas || [];
-  return `<div class="mapa-mini-preview">${zonas
-    .map((z) => {
-      const pos = z.pos || { left: 0, top: 0, width: 30, height: 30 };
-      const estilo = `left:${pos.left}%; top:${pos.top}%; width:${pos.width}%; height:${pos.height}%;`;
-      return `<div class="mapa-mini-zona" style="${estilo}">${z.emoji}</div>`;
-    })
-    .join("")}</div>`;
-}
-
+// como máximo un mapa por fase: un <select> simple por nombre, sin ver el layout de
+// zonas — eso ya lo mira en el mapa real una vez que arranca la partida
 function renderConfigMapas(mapasHabilitados) {
   const cont = document.getElementById("config-mapas");
   const fases = ["previa", "boliche", "after"];
@@ -404,23 +421,16 @@ function renderConfigMapas(mapasHabilitados) {
   cont.innerHTML = fases
     .map((fase) => {
       const variantes = mapa[fase] || [];
-      const habilitados = new Set((mapasHabilitados && mapasHabilitados[fase]) || variantes.map((v) => v.id));
+      const elegidoId = ((mapasHabilitados && mapasHabilitados[fase]) || [])[0];
 
-      const cards = variantes
-        .map(
-          (v) => `
-          <label class="mapa-config-card">
-            <input type="checkbox" data-fase="${fase}" data-mapa="${v.id}" ${habilitados.has(v.id) ? "checked" : ""}>
-            <div class="mapa-config-card-nombre">${v.nombre}</div>
-            ${renderMiniPreview(v)}
-          </label>`
-        )
+      const opciones = variantes
+        .map((v) => `<option value="${v.id}" ${v.id === elegidoId ? "selected" : ""}>${v.nombre}</option>`)
         .join("");
 
       return `
         <div class="config-mapas-fase">
-          <h3>${NOMBRES_FASE[fase]}</h3>
-          <div class="config-mapas-cards">${cards}</div>
+          <label for="select-mapa-${fase}">${NOMBRES_FASE[fase]}</label>
+          <select id="select-mapa-${fase}" data-fase="${fase}">${opciones}</select>
         </div>`;
     })
     .join("");
@@ -448,6 +458,11 @@ function renderConfigJugadores(jugadores) {
     })
     .join("");
 }
+
+// fases con el <details> de eventos desplegado — el panel se re-renderiza entero en
+// cada estado nuevo (por ejemplo, cada vez que se tilda un checkbox), así que sin esto
+// se te cerraría solo apenas tocás algo adentro
+const fasesEventosAbiertas = new Set();
 
 function renderConfigEventos(eventosHabilitados) {
   const cont = document.getElementById("config-eventos");
@@ -489,15 +504,29 @@ function renderConfigEventos(eventosHabilitados) {
         .join("");
 
       return `
-        <div class="config-eventos-fase">
-          <div class="config-eventos-fase-head">
+        <details class="config-eventos-fase" data-fase="${fase}" ${fasesEventosAbiertas.has(fase) ? "open" : ""}>
+          <summary class="config-eventos-fase-resumen">
             <h3>${NOMBRES_FASE[fase]}</h3>
-            <button type="button" class="btn-seleccionar-todo-eventos" data-fase="${fase}">Seleccionar todo</button>
+            <span class="config-eventos-fase-contador">${habilitadosFase.length} / ${todosFase.length} habilitados</span>
+          </summary>
+          <div class="config-eventos-fase-body">
+            <div class="config-eventos-fase-head">
+              <button type="button" class="btn-seleccionar-todo-eventos" data-fase="${fase}">Seleccionar todo</button>
+            </div>
+            <ul class="config-eventos-lista">${filasHabilitadas}${filasExcluidas}</ul>
           </div>
-          <ul class="config-eventos-lista">${filasHabilitadas}${filasExcluidas}</ul>
-        </div>`;
+        </details>`;
     })
     .join("");
+
+  // "toggle" no burbujea, así que no se puede delegar en #config-eventos: hay que
+  // escuchar cada <details> por separado, cada vez que se re-renderizan
+  cont.querySelectorAll(".config-eventos-fase").forEach((detalle) => {
+    detalle.addEventListener("toggle", () => {
+      if (detalle.open) fasesEventosAbiertas.add(detalle.dataset.fase);
+      else fasesEventosAbiertas.delete(detalle.dataset.fase);
+    });
+  });
 }
 
 const TEXTO_TIPO = {
@@ -543,31 +572,76 @@ function renderPuntajeDm(jugadores) {
     .join("");
 }
 
+// desglosa dado + dado, stat con su valor, y los modificadores que hayan aplicado
+// (NA y/o el del DM en encares/situaciones resueltas en dos pasos) — así el DM ve de
+// dónde sale el total sin tener que hacer la cuenta a mano
+function desgloseTirada(e) {
+  const stat = NOMBRES_STAT[e.stat] || e.stat;
+  const partes = [`🎲 ${e.dados_tirados[0]} + ${e.dados_tirados[1]}`];
+
+  const statBase = e.stat_base === undefined || e.stat_base === null ? e.stat_valor : e.stat_base;
+  partes.push(statBase === undefined || statBase === null ? stat : `${stat} ${statBase >= 0 ? "+" : ""}${statBase}`);
+
+  if (e.debilidad_nombre) {
+    const mod = e.debilidad_modificador || 0;
+    partes.push(`😵 ${e.debilidad_nombre} ${mod >= 0 ? "+" : ""}${mod}`);
+  }
+  if (e.modificador_na) {
+    partes.push(`NA ${e.modificador_na >= 0 ? "+" : ""}${e.modificador_na}`);
+  }
+  // ojo con la comparación: un modificador_dm en 0 es "Normal", un juicio válido del
+  // DM — distinto a que la tirada nunca haya pasado por ese paso (undefined)
+  if (e.modificador_dm !== undefined && e.modificador_dm !== null) {
+    partes.push(`DM ${etiquetaModificadorDm(e.modificador_dm)}`);
+  }
+
+  return partes.join(" · ");
+}
+
+// -1 = todavía no renderizamos nada: evita animar como "nueva" toda la lista que
+// puede venir de golpe la primera vez que el DM (re)carga la página
+let ultimoLogLength = -1;
+
 function renderLog(logEventos) {
   const cont = document.getElementById("log-eventos");
 
   if (logEventos.length === 0) {
     cont.innerHTML = "<p class='dm-hint'>Todavía no hubo tiradas.</p>";
+    ultimoLogLength = 0;
     return;
   }
+
+  const hayEntradaNueva = ultimoLogLength !== -1 && logEventos.length > ultimoLogLength;
+  ultimoLogLength = logEventos.length;
 
   cont.innerHTML = logEventos
     .slice()
     .reverse()
-    .map((e) => {
-      const stat = NOMBRES_STAT[e.stat] || e.stat;
-      const accion = e.contexto ? `${e.contexto} · ${stat}` : `tirada libre · ${stat}`;
+    .map((e, i) => {
       const claseTipo = CLASE_TIPO_LOG[e.tipo] || "normal";
+      const claseNueva = i === 0 && hayEntradaNueva ? " entrada-destacada" : "";
       return `
-      <div class="log-item" data-tipo="${claseTipo}">
-        <div>${e.jugador} <small>${accion} · 🎲 ${e.dados_tirados[0]} + ${e.dados_tirados[1]}${TEXTO_TIPO[e.tipo] || ""}</small></div>
+      <div class="log-item${claseNueva}" data-tipo="${claseTipo}">
+        <div>
+          <div>${e.jugador} <small>${e.contexto || "tirada libre"}</small></div>
+          <small>${desgloseTirada(e)}${TEXTO_TIPO[e.tipo] || ""}</small>
+        </div>
         <div class="log-total">${e.total}</div>
       </div>`;
     })
     .join("");
 }
 
-function renderEventos(fase, eventosUsados, situacionActual, eventosHabilitadosFase) {
+// título de la última situación activa que ya vimos — para animar solo la fila que
+// se acaba de activar, no todas las filas en cada re-render
+let ultimoTituloSituacionActiva = undefined;
+
+// título de la tarjeta cuyo panel de "⚙️ configurar dificultad" está abierto, si hay
+// alguno — igual que menuJugadorAbierto en el riel: la lista se re-renderiza entera en
+// cada estado nuevo, así que esto vive afuera del DOM para poder reabrirlo después
+let eventoConfigAbierto = null;
+
+function renderEventos(fase, eventosUsados, situacionActual, eventosHabilitadosFase, dificultadesPersonalizadas) {
   const cont = document.getElementById("lista-eventos");
   const todosFase = eventos[fase];
 
@@ -585,10 +659,16 @@ function renderEventos(fase, eventosUsados, situacionActual, eventosHabilitadosF
   document.getElementById("pill-eventos-total").textContent = `${usadosCount} / ${eventosFase.length}`;
   document.getElementById("pill-eventos-usados").textContent = `${usadosCount} de ${eventosFase.length} usadas`;
 
+  const tituloActivo = situacionActual ? situacionActual.titulo : null;
+  const esSituacionNueva = ultimoTituloSituacionActiva !== undefined && tituloActivo !== ultimoTituloSituacionActiva;
+  ultimoTituloSituacionActiva = tituloActivo;
+
   if (!eventosFase.length) {
     cont.innerHTML = "<p>No hay eventos habilitados para esta fase (configuralos en el lobby).</p>";
     return;
   }
+
+  const personalizadas = (dificultadesPersonalizadas && dificultadesPersonalizadas[fase]) || {};
 
   cont.innerHTML = eventosFase
     .map((e) => {
@@ -597,21 +677,35 @@ function renderEventos(fase, eventosUsados, situacionActual, eventosHabilitadosF
       const stats = (e.opciones || []).map((o) => o.stat).join(" / ");
       const estado = esActiva ? "activa" : esUsada ? "usada" : "";
       const textoBtn = esActiva ? "En uso" : esUsada ? "Repetir" : "Usar";
+      const claseNueva = esActiva && esSituacionNueva ? " entrada-destacada" : "";
+
+      const tieneCustom = e.titulo in personalizadas;
+      const dificultadMostrada = tieneCustom ? personalizadas[e.titulo] : e.dificultad;
 
       return `
-      <div class="evento-fila" data-estado="${estado}">
-        <div>${e.titulo}<br><small>dificultad ${e.dificultad} · ${stats}</small></div>
-        <button class="btn-usar-evento" data-titulo="${e.titulo}" ${esActiva ? "disabled" : ""}>${textoBtn}</button>
+      <div class="evento-fila${claseNueva}" data-estado="${estado}">
+        <div class="evento-fila-cabecera">
+          <div>${e.titulo}<br><small>dificultad ${dificultadMostrada}${tieneCustom ? " ✏️" : ""} · ${stats}</small></div>
+          <div class="evento-fila-botones">
+            <button class="btn-usar-evento" data-titulo="${e.titulo}" ${esActiva ? "disabled" : ""}>${textoBtn}</button>
+            <button data-config-abre="${e.titulo}" title="Configurar la dificultad de esta situación">⚙️</button>
+          </div>
+        </div>
+        <div class="evento-config" data-config="${e.titulo}" data-abierto="${eventoConfigAbierto === e.titulo}">
+          <label>Dificultad
+            <input type="number" class="input-dificultad-evento" data-titulo="${e.titulo}" value="${dificultadMostrada}">
+          </label>
+          <div class="evento-config-botones">
+            <button class="btn-primario" data-action="guardar-dificultad-evento" data-titulo="${e.titulo}">Guardar</button>
+            ${tieneCustom ? `<button data-action="restablecer-dificultad-evento" data-titulo="${e.titulo}" title="Volver a la dificultad de referencia (${e.dificultad})">↺ Restablecer</button>` : ""}
+          </div>
+        </div>
       </div>`;
     })
     .join("");
-
-  cont.querySelectorAll(".btn-usar-evento").forEach((btn) => {
-    btn.addEventListener("click", () => siguienteSituacion("elegir", btn.dataset.titulo));
-  });
 }
 
-function renderSituacionActual(situacion) {
+function renderSituacionActual(situacion, jugadores) {
   const cont = document.getElementById("situacion-actual-card");
 
   if (!situacion) {
@@ -623,9 +717,37 @@ function renderSituacionActual(situacion) {
     .map((o) => `<span class="pill pill-opcion">${o.texto} <i>· ${o.stat}</i></span>`)
     .join("");
 
-  const estadoHtml = situacion.resuelta
-    ? `<div class="resultado-box">Resuelta por <b>${situacion.resuelta_por}</b> — ${situacion.exito ? "✅ éxito" : "❌ fracaso"} <span style="color:var(--muted)">(${situacion.opcion_elegida || "sin opción"})</span></div>`
-    : `<p class="situacion-pendiente">⏳ Sin resolver todavía.</p>`;
+  let estadoHtml;
+  if (situacion.resuelta) {
+    estadoHtml = `<div class="resultado-box">Resuelta por <b>${situacion.resuelta_por}</b> — ${situacion.exito ? "✅ éxito" : "❌ fracaso"} <span style="color:var(--muted)">(${situacion.opcion_elegida || "sin opción"})</span></div>`;
+  } else if (situacion.pendiente) {
+    // mismo mecanismo que un encare pendiente: el jugador ya dijo su frase en voz alta,
+    // falta que el DM la juzgue y ahí recién se tira
+    const jugador = (jugadores || {})[situacion.pendiente.player_id];
+    const nombreJugador = jugador ? jugador.nombre : "?";
+    const statTxt = NOMBRES_STAT[situacion.pendiente.stat] || situacion.pendiente.stat;
+    const opcionTxt = situacion.pendiente.opcion && situacion.pendiente.opcion !== OTRO_OPCION_SITUACION
+      ? ` · "${situacion.pendiente.opcion}"`
+      : "";
+    const botonesHtml = PRESETS_MODIFICADOR_DM.map(
+      (p) => `
+      <button type="button" data-action="resolver-situacion-pendiente" data-modificador="${p.modificador}">
+        ${p.label} (${p.modificador > 0 ? "+" : ""}${p.modificador})
+      </button>`
+    ).join("");
+
+    estadoHtml = `
+      <div class="banner-encuentro banner-encuentro-pendiente">
+        <span style="font-size:1.1rem">🎙️</span>
+        <div>
+          <b>${nombreJugador}</b> ya dijo lo suyo (va a tirar ${statTxt}${opcionTxt}).
+          <small>¿Cómo estuvo? Elegí y se tira al toque:</small>
+          <div class="encuentro-dificultad-botones">${botonesHtml}</div>
+        </div>
+      </div>`;
+  } else {
+    estadoHtml = `<p class="situacion-pendiente">⏳ Sin resolver todavía.</p>`;
+  }
 
   cont.innerHTML = `
     <h3 class="situacion-titulo">${situacion.titulo}</h3>
@@ -688,6 +810,11 @@ function siguienteSituacion(modo, titulo) {
   ws.send(JSON.stringify({ type: "siguiente_situacion", modo, titulo: titulo || null }));
 }
 
+function configurarDificultadEvento(titulo, dificultad) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "configurar_dificultad_evento", titulo, dificultad }));
+}
+
 function iniciarEncuentro(npcId, jugadorObjetivo) {
   if (!ws || ws.readyState !== WebSocket.OPEN || !npcId || !jugadorObjetivo) return;
   ws.send(JSON.stringify({ type: "iniciar_encuentro", npc_id: npcId, jugador_objetivo: jugadorObjetivo }));
@@ -696,6 +823,11 @@ function iniciarEncuentro(npcId, jugadorObjetivo) {
 function resolverRondaEncare(npcId, modificadorDm) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({ type: "resolver_ronda_encare", npc_id: npcId, modificador_dm: modificadorDm }));
+}
+
+function resolverSituacionPendiente(modificadorDm) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "resolver_situacion_pendiente", modificador_dm: modificadorDm }));
 }
 
 function narrarIA() {
@@ -816,8 +948,8 @@ function conectarWs() {
       actualizarFaseStepper(msg.fase);
       renderJugadores(msg.jugadores, msg.mapa_actual, msg.npcs_revelados);
       renderLog(msg.log_eventos);
-      renderEventos(msg.fase, msg.eventos_usados, msg.situacion_actual, eventosHabilitadosActual[msg.fase]);
-      renderSituacionActual(msg.situacion_actual);
+      renderEventos(msg.fase, msg.eventos_usados, msg.situacion_actual, eventosHabilitadosActual[msg.fase], msg.dificultades_personalizadas);
+      renderSituacionActual(msg.situacion_actual, msg.jugadores);
       renderMapaVisual(msg.jugadores, msg.mapa_actual, msg.npcs_revelados, msg.fase);
       renderFormularioNpc(msg.fase, msg.mapa_actual, msg.npcs_revelados);
       renderEncuentroEnCurso(msg.npcs_revelados, msg.jugadores);
@@ -909,6 +1041,12 @@ document.getElementById("encuentro-en-curso").addEventListener("click", (e) => {
   resolverRondaEncare(btn.dataset.npc, Number(btn.dataset.modificador));
 });
 
+document.getElementById("situacion-actual-card").addEventListener("click", (e) => {
+  const btn = e.target.closest('button[data-action="resolver-situacion-pendiente"]');
+  if (!btn) return;
+  resolverSituacionPendiente(Number(btn.dataset.modificador));
+});
+
 document.getElementById("lista-npcs-revelados").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
@@ -927,6 +1065,39 @@ document.getElementById("btn-situacion-random").addEventListener("click", () => 
 
 document.getElementById("btn-elegir-situacion").addEventListener("click", () => {
   document.getElementById("card-eventos").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+document.getElementById("lista-eventos").addEventListener("click", (e) => {
+  const abre = e.target.closest("[data-config-abre]");
+  if (abre) {
+    const titulo = abre.dataset.configAbre;
+    eventoConfigAbierto = eventoConfigAbierto === titulo ? null : titulo;
+    document.querySelectorAll(".evento-config").forEach((panel) => {
+      panel.dataset.abierto = String(panel.dataset.config === eventoConfigAbierto);
+    });
+    return;
+  }
+
+  const btnUsar = e.target.closest(".btn-usar-evento");
+  if (btnUsar) {
+    siguienteSituacion("elegir", btnUsar.dataset.titulo);
+    return;
+  }
+
+  const btnGuardar = e.target.closest('[data-action="guardar-dificultad-evento"]');
+  if (btnGuardar) {
+    const input = btnGuardar.closest(".evento-config").querySelector(".input-dificultad-evento");
+    const valor = input.value === "" ? null : Number(input.value);
+    configurarDificultadEvento(btnGuardar.dataset.titulo, valor);
+    eventoConfigAbierto = null;
+    return;
+  }
+
+  const btnRestablecer = e.target.closest('[data-action="restablecer-dificultad-evento"]');
+  if (btnRestablecer) {
+    configurarDificultadEvento(btnRestablecer.dataset.titulo, null);
+    eventoConfigAbierto = null;
+  }
 });
 
 document.getElementById("btn-avanzar-fase").addEventListener("click", avanzarFase);
@@ -953,21 +1124,9 @@ document.getElementById("btn-cerrar-puntaje-dm").addEventListener("click", () =>
 });
 
 document.getElementById("config-mapas").addEventListener("change", (e) => {
-  const checkbox = e.target.closest('input[type="checkbox"][data-fase]');
-  if (!checkbox) return;
-
-  const fase = checkbox.dataset.fase;
-  const checkboxesFase = document.querySelectorAll(`#config-mapas input[type="checkbox"][data-fase="${fase}"]`);
-  const seleccionados = Array.from(checkboxesFase)
-    .filter((c) => c.checked)
-    .map((c) => c.dataset.mapa);
-
-  if (seleccionados.length === 0) {
-    checkbox.checked = true; // no se puede dejar una fase sin mapas habilitados
-    return;
-  }
-
-  configurarMapas({ [fase]: seleccionados });
+  const select = e.target.closest("select[data-fase]");
+  if (!select) return;
+  configurarMapas({ [select.dataset.fase]: [select.value] });
 });
 
 document.getElementById("config-eventos").addEventListener("change", (e) => {

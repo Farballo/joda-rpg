@@ -1,4 +1,4 @@
-# JODA RPG — Plan de MVP y Spec Técnica para Claude Code
+# NOCHERO — Plan de MVP y Spec Técnica para Claude Code
 
 ## 0. Contexto para quien lea esto (incluido Claude Code)
 
@@ -84,7 +84,7 @@ pedido explícito.)*
 | Revelado de NPCs | **Un solo flujo de revelado para todos los tipos de NPC.** El DM elige un NPC del "mazo" de la fase actual (`data/npcs.json`, filtrado por su campo `fase`) y lo revela en una zona, sin importar si es `ambiente`, `levante` o `confrontacion`. La carta se dispara a todos los jugadores y queda como marcador fijo en el mapa. Los botones de la carta ("Hablar"/"Ignorar") sólo marcan que el jugador la vio — igual que con los eventos de fase, el DM sigue narrando y aplicando consecuencias (NA, prenda) a mano, sin lógica automática. *(Revierte el esquema anterior, donde los NPCs de levante/confrontación tenían su propio flujo de revelado dirigido a un jugador: revelar y disparar el encuentro eran la misma acción. Ahora son **dos pasos separados** — ver la fila de abajo.)* |
 | Revelar ≠ iniciar encuentro | Revelar un NPC nunca dispara mecánica. Si el NPC es de tipo `levante` o `confrontacion`, el encuentro es un **segundo paso aparte**: sobre un NPC **ya revelado**, el DM elige un jugador y arranca el encuentro (`iniciar_encuentro`, sección 7). Narrativamente: primero el personaje aparece en escena y lo ve todo el mundo; después, en algún momento, se cruza con alguien puntual |
 | Un encuentro por vez (bloqueo global) | **No puede haber más de un encuentro sin resolver en toda la partida a la vez**, ni siquiera con NPCs distintos o jugadores distintos. El bloqueo es global, no por jugador: en la mesa real el DM narra un encuentro por vez y tener dos escenas abiertas en paralelo es más confuso que útil. Mientras hay uno pendiente, el panel del DM deshabilita el botón de iniciar y el server rechaza el mensaje. Se destraba de dos formas: que el jugador tire (queda `resuelto`), o que el DM saque al NPC de escena con `ocultar_npc` (que también cancela su encuentro) |
-| Estilo visual | Estética "neon boliche" de `mockups/JODA_RPG_mockups_neon_boliche.html` y `mockups/JODA_RPG_mockups_mapas_vivos.html`: fondo oscuro, acentos cian/rosa/violeta, tipografía grande y en negrita, tarjetas con bordes suaves. Se implementa con HTML/CSS plano (divs con posición absoluta, como en los mockups), sin canvas ni librerías de mapas — ver sección 5.7 para los tokens de diseño |
+| Estilo visual | Estética "neon boliche" de `mockups/NOCHERO_mockups_neon_boliche.html` y `mockups/NOCHERO_mockups_mapas_vivos.html`: fondo oscuro, acentos cian/rosa/violeta, tipografía grande y en negrita, tarjetas con bordes suaves. Se implementa con HTML/CSS plano (divs con posición absoluta, como en los mockups), sin canvas ni librerías de mapas — ver sección 5.7 para los tokens de diseño |
 | Alcance de los turnos | **Solo los encuentros de NPC** (levante/confrontación, ver fila de abajo) son por turnos. El resto del juego — tiradas libres de stat, NA, prendas, situaciones de fase — sigue funcionando como ya está: cualquier jugador actúa cuando quiere, sin esperar turno. No se reestructura lo ya construido en los milestones 1-9 |
 | Orden de turno en encuentros | El DM asigna a mano qué jugador le toca en cada encuentro de NPC (levante o confrontación), sin rotación automática fija. Más trabajo para el DM que una cola automática, pero más flexible para narrar (ej. asignarle el encuentro al jugador que más sentido tenga en ese momento) |
 | Encuentros de NPC (levante/confrontación) | Se agrega `tipo` a `data/npcs.json`: `"ambiente"` (los NPCs ya existentes, decorativos, sin mecánica propia), `"levante"` (intentar levantarse a alguien: `puntaje_lindura` 1-10 y `dificultad_chamuyo` por ronda) o `"confrontacion"` (pelear/convencer/sobornar a alguien: `dificultad` automática por ronda, misma escala que el resto de la app). Los tres se **revelan igual** (revelado global, ver arriba); lo que distingue a levante/confrontación es que además admiten un **encuentro dirigido a un jugador específico** encima del reveal, resuelto con el árbol de diálogo de la fila de abajo — ver sección 5.5 y 7 |
@@ -699,7 +699,7 @@ no tener nada que ver con las de la anterior.
 
 ### 5.7 Sistema visual (design tokens)
 
-Tomado directamente de `mockups/JODA_RPG_mockups_neon_boliche.html` — se
+Tomado directamente de `mockups/NOCHERO_mockups_neon_boliche.html` — se
 usa como referencia visual para `/dm` y `/jugador` de acá en adelante,
 respetando igual la regla de "sin build step": son variables CSS planas en
 `static/style.css`, sin librería de diseño.
@@ -962,7 +962,7 @@ notebook específica — en CPU puro puede variar bastante según el hardware.
 ## 10. Estructura de carpetas
 
 ```
-joda-rpg/
+nochero/
 ├── app.py                  # FastAPI app, rutas, websockets
 ├── game_state.py           # estado en memoria + lógica de mutación
 ├── dice.py                 # motor de tiradas (función pura, testeable)
