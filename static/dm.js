@@ -8,7 +8,30 @@ const NOMBRES_NA = [
 ];
 const NA_MAX = 10;
 
+// tramo visual (borde/barra del riel) por valor de NA, en paralelo a NOMBRES_NA
+const TRAMOS_NA = [
+  "sobrio", "sobrio",
+  "alegre", "alegre",
+  "picante", "picante",
+  "caos", "caos",
+  "irrecuperable", "irrecuperable",
+  "leyenda",
+];
+
 const NOMBRES_FASE = { previa: "Previa", boliche: "Boliche", after: "After", terminado: "Terminado" };
+const ORDEN_FASES = ["previa", "boliche", "after"];
+
+const NOMBRES_STAT = { carisma: "Carisma", aguante: "Aguante", astucia: "Astucia", suerte: "Suerte" };
+
+// presets rápidos para juzgar en vivo lo que dijo el jugador: el modificador se suma
+// directo a esa tirada (bonus si estuvo bueno, malus si estuvo flojo)
+const PRESETS_DIFICULTAD_ENCARE = [
+  { label: "🔥 Muy bueno", modificador: 4 },
+  { label: "🙂 Bueno", modificador: 2 },
+  { label: "😐 Normal", modificador: 0 },
+  { label: "😬 Flojo", modificador: -2 },
+  { label: "💀 Muy malo", modificador: -4 },
+];
 
 let personajes = [];
 let prendas = [];
@@ -17,6 +40,11 @@ let mapa = {};
 let npcs = [];
 let ws = null;
 let eventosHabilitadosActual = {};
+
+// id del jugador cuyo menú (prendas / mover) está abierto en el riel, si hay alguno.
+// El riel se re-renderiza entero en cada estado_completo, así que guardamos esto
+// afuera del DOM para poder reabrirlo después de cada render.
+let menuJugadorAbierto = null;
 
 async function cargarPersonajes() {
   const res = await fetch("/data/personajes.json");
@@ -58,85 +86,99 @@ function efectoPrenda(prendaId) {
   return p ? p.efecto : "";
 }
 
-function renderJugadores(jugadores, mapaActual) {
-  const lista = document.getElementById("lista-jugadores");
+function jugadorEnEncuentro(playerId, npcsRevelados) {
+  const enCurso = encuentroEnCurso(npcsRevelados);
+  return enCurso !== null && enCurso.jugador_objetivo === playerId;
+}
+
+function renderJugadores(jugadores, mapaActual, npcsRevelados) {
+  const riel = document.getElementById("riel-jugadores");
   const ids = Object.keys(jugadores);
 
   if (ids.length === 0) {
-    lista.innerHTML = "<li>Todavía no se unió nadie.</li>";
+    riel.innerHTML = "<p class='dm-hint'>Todavía no se unió nadie.</p>";
     return;
   }
 
   const zonasFase = mapaActual.zonas || [];
 
-  lista.innerHTML = ids
+  riel.innerHTML = ids
     .map((id) => {
       const j = jugadores[id];
+      const tramo = TRAMOS_NA[j.na];
       const pct = (j.na / NA_MAX) * 100;
-      const prendasHtml = j.prendas_activas.length
+      const personaje = personajes.find((p) => p.id === j.personaje_id);
+      const debilidadNombre = personaje ? personaje.debilidad.nombre : "Debilidad";
+      const cartaHtml = personaje ? cartaMiniHtml(personaje) : "";
+      const zonaActual = zonasFase.find((z) => z.id === j.zona_actual);
+
+      const prendasMenuHtml = j.prendas_activas.length
         ? j.prendas_activas
             .map(
               (pid) => `
-              <span class="prenda-tag" title="${efectoPrenda(pid)}">
+              <div class="prenda-chip" title="${efectoPrenda(pid)}">
                 ${nombrePrenda(pid)}
-                <button data-action="resolver-prenda" data-player="${id}" data-prenda="${pid}">✕</button>
-              </span>`
+                <button data-action="resolver-prenda" data-player="${id}" data-prenda="${pid}" title="Sacarle esta prenda a ${j.nombre}">✕</button>
+              </div>`
             )
             .join("")
-        : `<span class="sin-prenda">Sin prenda</span>`;
+        : `<p class="dm-hint" style="margin:0">Sin prenda.</p>`;
 
       const opcionesPrenda = prendas.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("");
       const opcionesZona = zonasFase
         .map((z) => `<option value="${z.id}" ${z.id === j.zona_actual ? "selected" : ""}>${z.emoji} ${z.nombre}</option>`)
         .join("");
 
-      const personaje = personajes.find((p) => p.id === j.personaje_id);
-      const debilidadNombre = personaje ? personaje.debilidad.nombre : "Debilidad";
-      const debilidadBtnTexto = j.debilidad_activa ? `😵 Desactivar: ${debilidadNombre}` : "😌 Activar debilidad";
-
-      const cartaHtmlJugador = personaje
-        ? cartaMiniHtml(personaje, { clases: "player-carta" })
-        : `<div class="player-carta"></div>`;
-
-      const zonaActual = zonasFase.find((z) => z.id === j.zona_actual);
-      const estados = [
-        j.modo_caos_activo ? `<span class="estado-badge estado-caos">🔥 Modo Caos</span>` : "",
-        j.debilidad_activa ? `<span class="estado-badge estado-debilidad">😵 Debilidad</span>` : "",
-        zonaActual ? `<span class="estado-badge estado-zona">${zonaActual.emoji} ${zonaActual.nombre}</span>` : "",
+      const badgesHtml = [
+        jugadorEnEncuentro(id, npcsRevelados) ? `<span class="badge badge-turno">⏳ Encuentro</span>` : "",
+        j.modo_caos_activo ? `<span class="badge badge-caos">🔥 Caos</span>` : "",
+        j.debilidad_activa ? `<span class="badge badge-debil">😵 ${debilidadNombre}</span>` : "",
+        j.prendas_activas.length ? `<span class="badge badge-prenda">🍺 ${j.prendas_activas.length}</span>` : "",
+        zonaActual ? `<span class="badge badge-zona">${zonaActual.emoji} ${zonaActual.nombre}</span>` : "",
       ].join("");
 
+      const debilidadBtnHtml = j.debilidad_activa
+        ? `<button data-action="toggle-debilidad" data-player="${id}" data-activa="true" class="btn-activo" title="Desactivar la debilidad activa: ${debilidadNombre}"><span class="btn-icon">😵</span><span class="btn-label">Debilidad</span></button>`
+        : `<button data-action="toggle-debilidad" data-player="${id}" data-activa="false" title="Activar la debilidad de ${j.nombre} (${debilidadNombre})"><span class="btn-icon">😌</span><span class="btn-label">Debilidad</span></button>`;
+
       return `
-      <li class="player-card">
-        ${cartaHtmlJugador}
-        <div class="player-cuerpo">
-          <div class="player-head">
-            <strong>${j.nombre}</strong>
-            <span>${nombrePersonaje(j.personaje_id)}</span>
-          </div>
-          <div class="na-meter"><div class="na-fill" style="width:${pct}%"></div></div>
-          <div class="na-label">NA ${j.na} / ${NA_MAX} — ${NOMBRES_NA[j.na]}</div>
-          <div class="player-estados">${estados}</div>
-          <div class="na-controls">
-            <button data-action="menos" data-player="${id}" ${j.na <= 0 ? "disabled" : ""}>−1</button>
-            <button data-action="mas" data-player="${id}" ${j.na >= NA_MAX ? "disabled" : ""}>+1</button>
-          </div>
-          <div class="debilidad-controls">
-            <button data-action="toggle-debilidad" data-player="${id}" data-activa="${j.debilidad_activa}" class="${j.debilidad_activa ? "btn-debilidad-activa" : ""}">${debilidadBtnTexto}</button>
-          </div>
-          <div class="prendas-activas">${prendasHtml}</div>
-          <div class="prenda-controls">
-            <select class="select-prenda" data-player="${id}">
-              <option value="">🎲 Random</option>
-              ${opcionesPrenda}
-            </select>
-            <button data-action="repartir-prenda" data-player="${id}">Repartir prenda</button>
-          </div>
-          <div class="zona-controls">
-            <select class="select-zona" data-player="${id}">${opcionesZona}</select>
-            <button data-action="mover-jugador" data-player="${id}">Mover</button>
+      <article class="jugador" data-tramo="${tramo}">
+        <div class="jugador-menu" data-menu="${id}" data-abierto="${menuJugadorAbierto === id}">
+          <div class="jugador-menu-titulo">Prendas activas</div>
+          ${prendasMenuHtml}
+          <select class="select-prenda" data-player="${id}" title="Elegí una prenda o dejá &quot;al azar&quot;">
+            <option value="">🎲 Prenda al azar</option>
+            ${opcionesPrenda}
+          </select>
+          <button class="btn-primario" data-action="repartir-prenda" data-player="${id}" title="Confirmar y repartir la prenda elegida">Repartir prenda</button>
+          <div class="jugador-menu-titulo" style="margin-top:0.2rem">Mover a</div>
+          <select class="select-zona" data-player="${id}" title="Mueve a ${j.nombre} apenas elegís la zona, sin botón de confirmar">${opcionesZona}</select>
+        </div>
+
+        <div class="jugador-head">
+          <div class="jugador-carta">${cartaHtml}</div>
+          <div>
+            <div class="jugador-nombre">${j.nombre}</div>
+            <div class="jugador-personaje">${nombrePersonaje(j.personaje_id)}</div>
+            <div class="na-linea"><span class="na-valor">NA ${j.na} / ${NA_MAX}</span><span class="na-nombre">${NOMBRES_NA[j.na]}</span></div>
+            <div class="na-barra"><div class="na-fill-v2" data-tramo="${tramo}" style="width:${pct}%"></div></div>
           </div>
         </div>
-      </li>`;
+
+        <div class="badges">${badgesHtml}</div>
+
+        <div class="jugador-controles">
+          <div class="jugador-controles-fila">
+            <button class="btn-na" data-action="menos" data-player="${id}" title="Bajar 1 Nivel de Alcohol a ${j.nombre}" ${j.na <= 0 ? "disabled" : ""}>−1 <span class="btn-label">NA</span></button>
+            <button class="btn-na btn-na-mas" data-action="mas" data-player="${id}" title="Subir 1 Nivel de Alcohol a ${j.nombre}" ${j.na >= NA_MAX ? "disabled" : ""}>+1 <span class="btn-label">NA</span></button>
+          </div>
+          <div class="jugador-controles-fila">
+            <button data-abre="${id}" title="Repartirle o sacarle una prenda a ${j.nombre}"><span class="btn-icon">🍺</span><span class="btn-label">Prendas</span></button>
+            <button data-abre="${id}" title="Mover a ${j.nombre} de zona"><span class="btn-icon">📍</span><span class="btn-label">Mover</span></button>
+            ${debilidadBtnHtml}
+          </div>
+        </div>
+      </article>`;
     })
     .join("");
 }
@@ -146,12 +188,14 @@ function nombreNpc(npcId) {
   return n ? `${n.avatar} ${n.nombre}` : npcId;
 }
 
-function renderMapaVisual(jugadores, mapaActual, npcsRevelados) {
+function renderMapaVisual(jugadores, mapaActual, npcsRevelados, fase) {
   const cont = document.getElementById("mapa-visual");
   const nombreEl = document.getElementById("mapa-nombre-actual");
   const zonas = mapaActual.zonas || [];
 
-  nombreEl.textContent = mapaActual.nombre || "";
+  nombreEl.innerHTML = `🗺️ ${mapaActual.nombre || ""} <small>${NOMBRES_FASE[fase] || ""}</small>`;
+  document.getElementById("pill-mapa-resumen").textContent =
+    `${zonas.length} zonas · ${Object.keys(jugadores).length} jugadores · ${Object.keys(npcsRevelados || {}).length} NPCs`;
 
   if (!zonas.length) {
     cont.innerHTML = "<p>Sin mapa para esta fase.</p>";
@@ -163,25 +207,34 @@ function renderMapaVisual(jugadores, mapaActual, npcsRevelados) {
       const jugadoresEnZona = Object.values(jugadores).filter((j) => j.zona_actual === z.id);
       const npcsEnZona = Object.entries(npcsRevelados).filter(([, info]) => info.zona === z.id);
 
-      const tokensHtml = jugadoresEnZona.map((j) => `<span class="token-jugador">${j.nombre}</span>`).join("");
+      const tokensJugadorHtml = jugadoresEnZona
+        .map((j) => {
+          const personaje = personajes.find((p) => p.id === j.personaje_id);
+          const avatarHtml = personaje ? cartaThumbHtml(personaje) : "";
+          return `<span class="mapa-token mapa-token-jugador">${avatarHtml}${j.nombre}</span>`;
+        })
+        .join("");
 
-      const npcsHtml = npcsEnZona
-        .map(
-          ([npcId, info]) => `
-          <span class="token-npc${info.encuentro && !info.encuentro.resuelto ? " token-npc-encuentro" : ""}">
-            ${info.encuentro && !info.encuentro.resuelto ? "⏳ " : ""}${nombreNpc(npcId)}
-            <button data-action="ocultar-npc" data-npc="${npcId}">✕</button>
-          </span>`
-        )
+      const tokensNpcHtml = npcsEnZona
+        .map(([npcId, info]) => {
+          const npc = npcs.find((n) => n.id === npcId);
+          const enCurso = info.encuentro && !info.encuentro.resuelto;
+          const claseNpc = enCurso
+            ? "mapa-token-npc-encuentro"
+            : npc && npc.importancia === "importante"
+              ? "mapa-token-npc mapa-token-npc-importante"
+              : "mapa-token-npc";
+          return `<span class="mapa-token ${claseNpc}">${enCurso ? "⏳ " : ""}${npc ? npc.avatar : "❓"} ${npc ? npc.nombre : npcId}</span>`;
+        })
         .join("");
 
       const pos = z.pos || { left: 0, top: 0, width: 30, height: 30 };
       const estilo = `left:${pos.left}%; top:${pos.top}%; width:${pos.width}%; height:${pos.height}%;`;
 
       return `
-      <div class="zona-box" style="${estilo}">
-        <div class="zona-header">${z.emoji} ${z.nombre}</div>
-        <div class="zona-tokens">${tokensHtml}${npcsHtml}</div>
+      <div class="mapa-zona" style="${estilo}">
+        <div class="mapa-zona-nombre">${z.emoji} ${z.nombre}</div>
+        <div class="mapa-zona-tokens">${tokensJugadorHtml}${tokensNpcHtml}</div>
       </div>`;
     })
     .join("");
@@ -219,6 +272,8 @@ function renderFormularioNpc(fase, mapaActual, npcsRevelados) {
   document.getElementById("btn-revelar-npc").disabled = !disponibles.length;
 
   selectZona.innerHTML = zonas.map((z) => `<option value="${z.id}">${z.emoji} ${z.nombre}</option>`).join("");
+
+  document.getElementById("pill-npcs-mazo").textContent = `mazo de ${NOMBRES_FASE[fase]} · ${disponibles.length} quedan`;
 }
 
 function renderEncuentroEnCurso(npcsRevelados, jugadores) {
@@ -232,11 +287,38 @@ function renderEncuentroEnCurso(npcsRevelados, jugadores) {
 
   const npc = npcs.find((n) => n.id === enCurso.npcId);
   const jugador = jugadores[enCurso.jugador_objetivo];
+  const nombreNpc = npc ? `${npc.avatar} ${npc.nombre}` : enCurso.npcId;
+  const nombreJugador = jugador ? jugador.nombre : "?";
+
+  if (enCurso.pendiente) {
+    const statTxt = NOMBRES_STAT[enCurso.pendiente.stat] || enCurso.pendiente.stat;
+    const botonesHtml = PRESETS_DIFICULTAD_ENCARE.map(
+      (p) => `
+      <button type="button" data-action="resolver-ronda-encare" data-npc="${enCurso.npcId}" data-modificador="${p.modificador}">
+        ${p.label} (${p.modificador > 0 ? "+" : ""}${p.modificador})
+      </button>`
+    ).join("");
+
+    cont.innerHTML = `
+      <div class="banner-encuentro banner-encuentro-pendiente">
+        <span style="font-size:1.1rem">🎙️</span>
+        <div>
+          <b>${nombreJugador}</b> ya tiró su frase con <b>${nombreNpc}</b>
+          (va a tirar ${statTxt}) — ronda ${enCurso.rondas_jugadas + 1}.
+          <small>¿Cómo estuvo? Elegí y se tira al toque:</small>
+          <div class="encuentro-dificultad-botones">${botonesHtml}</div>
+        </div>
+      </div>`;
+    return;
+  }
+
   cont.innerHTML = `
-    <div class="encuentro-en-curso-banner">
-      ⏳ <strong>${npc ? `${npc.avatar} ${npc.nombre}` : enCurso.npcId}</strong> está encarando a
-      <strong>${jugador ? jugador.nombre : "?"}</strong> — ronda ${enCurso.rondas_jugadas + 1}.
-      <span>Hasta que tire (o saques al NPC de escena) no se puede arrancar otro encuentro.</span>
+    <div class="banner-encuentro">
+      <span style="font-size:1.1rem">⏳</span>
+      <div>
+        <b>${nombreNpc}</b> está encarando a <b>${nombreJugador}</b> — ronda ${enCurso.rondas_jugadas + 1}.
+        <small>Hasta que tire (o saques al NPC de escena) no se puede arrancar otro encuentro.</small>
+      </div>
     </div>`;
 }
 
@@ -244,8 +326,10 @@ function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
   const cont = document.getElementById("lista-npcs-revelados");
   const entradas = Object.entries(npcsRevelados || {});
 
+  document.getElementById("pill-npcs-escena").textContent = `${entradas.length} NPCs`;
+
   if (!entradas.length) {
-    cont.innerHTML = "<p>Todavía no revelaste ningún NPC.</p>";
+    cont.innerHTML = "<p class='dm-hint'>Todavía no revelaste ningún NPC.</p>";
     return;
   }
 
@@ -262,42 +346,41 @@ function renderNpcsRevelados(npcsRevelados, jugadores, mapaActual) {
       const zona = zonas.find((z) => z.id === info.zona);
       const encuentro = info.encuentro;
       const objetivo = encuentro ? jugadores[encuentro.jugador_objetivo] : null;
+      const enCursoEsteNpc = encuentro && !encuentro.resuelto;
+      const puedeAsignar = esDeEncuentro(npc) && !enCursoEsteNpc;
 
-      let accionHtml = "";
-      if (!esDeEncuentro(npc)) {
-        accionHtml = `<p class="npc-revelado-nota">Ambiente — sin mecánica de encuentro.</p>`;
-      } else if (encuentro && !encuentro.resuelto) {
-        accionHtml = `<p class="npc-revelado-pendiente">⏳ Encuentro en curso con <strong>${objetivo ? objetivo.nombre : "?"}</strong> — esperando su tirada.</p>`;
-      } else {
-        const resueltoHtml = encuentro
-          ? `<p class="npc-revelado-nota">✅ Ya resolvió con ${objetivo ? objetivo.nombre : "?"}. Se lo podés volver a asignar.</p>`
+      const metaExtraHtml = enCursoEsteNpc
+        ? `<span style="color:var(--violet);font-weight:700">⏳ con ${objetivo ? objetivo.nombre : "?"}</span>`
+        : encuentro
+          ? `<span style="color:var(--muted)">✅ ya resolvió con ${objetivo ? objetivo.nombre : "?"}</span>`
           : "";
-        const bloqueado = hayEncuentro || !idsJugadores.length;
-        const hint = hayEncuentro
-          ? `<p class="npc-revelado-nota">Hay otro encuentro sin resolver.</p>`
-          : !idsJugadores.length
-            ? `<p class="npc-revelado-nota">No hay jugadores en la partida.</p>`
-            : "";
-        accionHtml = `
-          ${resueltoHtml}
-          <div class="npc-revelado-acciones">
-            <select class="select-objetivo-encuentro" data-npc="${npcId}" ${bloqueado ? "disabled" : ""}>${opcionesJugador}</select>
-            <button data-action="iniciar-encuentro" data-npc="${npcId}" ${bloqueado ? "disabled" : ""}>💬 Iniciar encuentro</button>
-          </div>
-          ${hint}`;
-      }
+
+      const bloqueado = hayEncuentro || !idsJugadores.length;
+      const tituloBloqueo = hayEncuentro ? "Hay otro encuentro sin resolver" : "No hay jugadores en la partida";
+
+      // el select + "Iniciar encuentro" no entran con texto legible en la columna
+      // angosta de la derecha, así que van en una fila propia debajo del nombre
+      const filaAsignarHtml = puedeAsignar
+        ? `
+          <div class="npc-accion">
+            <select class="select-objetivo-encuentro" data-npc="${npcId}" ${bloqueado ? "disabled" : ""} title="Elegí a quién le arrancás el encuentro">${opcionesJugador}</select>
+            <button class="btn-primario" data-action="iniciar-encuentro" data-npc="${npcId}" ${bloqueado ? "disabled" : ""} title="${bloqueado ? tituloBloqueo : "Le asigna el turno de este encuentro al jugador elegido — lo mismo que pasa si el jugador le da Hablar al NPC desde su celu"}">💬 Iniciar encuentro</button>
+          </div>`
+        : "";
 
       return `
-      <div class="npc-revelado-card">
-        <div class="npc-revelado-head">
-          <strong>${npc ? `${npc.avatar} ${npc.nombre}` : npcId}</strong>
-          <button data-action="ocultar-npc" data-npc="${npcId}" title="Sacar de escena">✕</button>
+      <div class="npc-fila" data-estado="${enCursoEsteNpc ? "encuentro" : ""}">
+        <div class="npc-avatar">${npc ? npc.avatar : "❓"}</div>
+        <div>
+          <div class="npc-nombre">${npc ? npc.nombre : npcId}</div>
+          <div class="npc-meta">
+            <span class="npc-tag">${npc ? ETIQUETA_TIPO[npc.tipo] || npc.tipo : "?"}</span>
+            ${zona ? `<span class="npc-tag">${zona.emoji} ${zona.nombre}</span>` : ""}
+            ${metaExtraHtml}
+          </div>
         </div>
-        <div class="npc-revelado-meta">
-          <span class="npc-revelado-tag">${npc ? ETIQUETA_TIPO[npc.tipo] || npc.tipo : "?"}</span>
-          ${zona ? `<span class="npc-revelado-tag">${zona.emoji} ${zona.nombre}</span>` : ""}
-        </div>
-        ${accionHtml}
+        <button class="btn-x" data-action="ocultar-npc" data-npc="${npcId}" title="Sacar a ${npc ? npc.nombre : npcId} de escena">✕</button>
+        ${filaAsignarHtml}
       </div>`;
     })
     .join("");
@@ -423,6 +506,8 @@ const TEXTO_TIPO = {
   exito_bonus: " — ÉXITO CON BONUS",
 };
 
+const CLASE_TIPO_LOG = { normal: "normal", papelon_automatico: "papelon", exito_bonus: "bonus" };
+
 const ETIQUETA_TIPO_HISTORIAL = { situacion: "📋", levante: "💘", confrontacion: "😤" };
 
 function renderPuntajeDm(jugadores) {
@@ -459,19 +544,25 @@ function renderPuntajeDm(jugadores) {
 }
 
 function renderLog(logEventos) {
-  const lista = document.getElementById("log-eventos");
+  const cont = document.getElementById("log-eventos");
 
   if (logEventos.length === 0) {
-    lista.innerHTML = "<li>Todavía no hubo tiradas.</li>";
+    cont.innerHTML = "<p class='dm-hint'>Todavía no hubo tiradas.</p>";
     return;
   }
 
-  lista.innerHTML = logEventos
+  cont.innerHTML = logEventos
     .slice()
     .reverse()
     .map((e) => {
-      const accion = e.contexto ? `${e.contexto} (${e.stat})` : `tiró ${e.stat}`;
-      return `<li>${e.jugador} ${accion} → ${e.dados_tirados[0]} + ${e.dados_tirados[1]}, total ${e.total}${TEXTO_TIPO[e.tipo] || ""}</li>`;
+      const stat = NOMBRES_STAT[e.stat] || e.stat;
+      const accion = e.contexto ? `${e.contexto} · ${stat}` : `tirada libre · ${stat}`;
+      const claseTipo = CLASE_TIPO_LOG[e.tipo] || "normal";
+      return `
+      <div class="log-item" data-tipo="${claseTipo}">
+        <div>${e.jugador} <small>${accion} · 🎲 ${e.dados_tirados[0]} + ${e.dados_tirados[1]}${TEXTO_TIPO[e.tipo] || ""}</small></div>
+        <div class="log-total">${e.total}</div>
+      </div>`;
     })
     .join("");
 }
@@ -489,25 +580,28 @@ function renderEventos(fase, eventosUsados, situacionActual, eventosHabilitadosF
     .map((titulo) => todosFase.find((e) => e.titulo === titulo))
     .filter(Boolean);
 
+  const usados = new Set((eventosUsados && eventosUsados[fase]) || []);
+  const usadosCount = eventosFase.filter((e) => usados.has(e.titulo)).length;
+  document.getElementById("pill-eventos-total").textContent = `${usadosCount} / ${eventosFase.length}`;
+  document.getElementById("pill-eventos-usados").textContent = `${usadosCount} de ${eventosFase.length} usadas`;
+
   if (!eventosFase.length) {
     cont.innerHTML = "<p>No hay eventos habilitados para esta fase (configuralos en el lobby).</p>";
     return;
   }
 
-  const usados = new Set((eventosUsados && eventosUsados[fase]) || []);
-
   cont.innerHTML = eventosFase
     .map((e) => {
       const esActiva = situacionActual && situacionActual.titulo === e.titulo;
-      const clases = ["evento-card"];
-      if (usados.has(e.titulo)) clases.push("evento-usado");
-      if (esActiva) clases.push("evento-activo");
+      const esUsada = usados.has(e.titulo);
+      const stats = (e.opciones || []).map((o) => o.stat).join(" / ");
+      const estado = esActiva ? "activa" : esUsada ? "usada" : "";
+      const textoBtn = esActiva ? "En uso" : esUsada ? "Repetir" : "Usar";
 
       return `
-      <div class="${clases.join(" ")}">
-        <div class="evento-titulo">${e.titulo}</div>
-        <p>${e.texto}</p>
-        <button class="btn-usar-evento" data-titulo="${e.titulo}">${esActiva ? "En uso" : "Usar esta"}</button>
+      <div class="evento-fila" data-estado="${estado}">
+        <div>${e.titulo}<br><small>dificultad ${e.dificultad} · ${stats}</small></div>
+        <button class="btn-usar-evento" data-titulo="${e.titulo}" ${esActiva ? "disabled" : ""}>${textoBtn}</button>
       </div>`;
     })
     .join("");
@@ -525,25 +619,23 @@ function renderSituacionActual(situacion) {
     return;
   }
 
-  const opcionesHtml =
-    situacion.opciones && situacion.opciones.length
-      ? `<div class="situacion-opciones-dm">${situacion.opciones
-          .map((o) => `<span class="opcion-pill">${o.texto} → ${o.stat}</span>`)
-          .join("")}<span class="opcion-pill opcion-pill-otro">🎭 Otro (decide DM) → cualquier stat</span></div>`
-      : "";
+  const opcionesPillsHtml = (situacion.opciones || [])
+    .map((o) => `<span class="pill pill-opcion">${o.texto} <i>· ${o.stat}</i></span>`)
+    .join("");
 
   const estadoHtml = situacion.resuelta
-    ? `<p class="situacion-resuelta">Resuelta por <strong>${situacion.resuelta_por}</strong> — ${situacion.exito ? "✅ éxito" : "❌ fracaso"} (${situacion.opcion_elegida || "sin opción"})</p>`
+    ? `<div class="resultado-box">Resuelta por <b>${situacion.resuelta_por}</b> — ${situacion.exito ? "✅ éxito" : "❌ fracaso"} <span style="color:var(--muted)">(${situacion.opcion_elegida || "sin opción"})</span></div>`
     : `<p class="situacion-pendiente">⏳ Sin resolver todavía.</p>`;
 
   cont.innerHTML = `
-    <div class="situacion-card">
-      <div class="evento-titulo">${situacion.titulo}</div>
-      <p>${situacion.texto}</p>
-      <div class="situacion-meta">🎲 dificultad ${situacion.dificultad}</div>
-      ${opcionesHtml}
-      ${estadoHtml}
-    </div>`;
+    <h3 class="situacion-titulo">${situacion.titulo}</h3>
+    <p class="situacion-texto">${situacion.texto}</p>
+    <div class="pill-row">
+      <span class="pill pill-dificultad">🎲 Dificultad ${situacion.dificultad}</span>
+      ${opcionesPillsHtml}
+      <span class="pill pill-otro">🎭 Otro (decide DM)</span>
+    </div>
+    ${estadoHtml}`;
 }
 
 function avanzarFase() {
@@ -601,6 +693,11 @@ function iniciarEncuentro(npcId, jugadorObjetivo) {
   ws.send(JSON.stringify({ type: "iniciar_encuentro", npc_id: npcId, jugador_objetivo: jugadorObjetivo }));
 }
 
+function resolverRondaEncare(npcId, modificadorDm) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "resolver_ronda_encare", npc_id: npcId, modificador_dm: modificadorDm }));
+}
+
 function narrarIA() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const promptExtra = document.getElementById("narrar-prompt-extra").value.trim();
@@ -629,15 +726,28 @@ function mostrarResultadoNarracion(texto) {
 }
 
 function mostrarPantalla(partidaCreada, partidaIniciada) {
+  const dashboardVisible = partidaCreada && partidaIniciada;
+
   document.getElementById("pantalla-crear-partida").classList.toggle("oculto", partidaCreada);
   document.getElementById("pantalla-configuracion").classList.toggle("oculto", !partidaCreada || partidaIniciada);
-  document.getElementById("dm-dashboard").classList.toggle("oculto", !partidaCreada || !partidaIniciada);
+
+  // el topbar denso (sala-chip + stepper de fase) solo tiene sentido con la partida
+  // en curso; en las pantallas de crear/configurar queda el topbar simple de siempre
+  document.getElementById("dashboard-shell").classList.toggle("oculto", !dashboardVisible);
+  document.getElementById("topbar-simple").classList.toggle("oculto", dashboardVisible);
+
   document.getElementById("btn-nueva-partida").classList.toggle("oculto", !partidaCreada);
 }
 
 function crearPartida() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({ type: "crear_partida" }));
+}
+
+function confirmarNuevaPartida() {
+  if (confirm("¿Crear una partida nueva? Se van a desconectar todos los jugadores actuales.")) {
+    crearPartida();
+  }
 }
 
 function iniciarPartida() {
@@ -675,6 +785,19 @@ function mostrarError(detalle) {
   errorTimeoutId = setTimeout(() => cont.classList.add("oculto"), 5000);
 }
 
+function actualizarSalaChip(jugadores) {
+  document.getElementById("sala-chip-host").textContent = `${location.host}/jugador`;
+  document.getElementById("sala-chip-conectados").textContent = Object.keys(jugadores).length;
+}
+
+function actualizarFaseStepper(fase) {
+  const idx = fase === "terminado" ? ORDEN_FASES.length : ORDEN_FASES.indexOf(fase);
+  document.querySelectorAll(".fase-paso").forEach((li) => {
+    const i = ORDEN_FASES.indexOf(li.dataset.fase);
+    li.dataset.estado = i < idx ? "hecha" : i === idx ? "activa" : "";
+  });
+}
+
 function conectarWs() {
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${protocolo}://${location.host}/ws/dm`);
@@ -689,11 +812,13 @@ function conectarWs() {
       renderConfigMapas(msg.mapas_habilitados);
       renderConfigEventos(msg.eventos_habilitados);
       renderConfigJugadores(msg.jugadores);
-      renderJugadores(msg.jugadores, msg.mapa_actual);
+      actualizarSalaChip(msg.jugadores);
+      actualizarFaseStepper(msg.fase);
+      renderJugadores(msg.jugadores, msg.mapa_actual, msg.npcs_revelados);
       renderLog(msg.log_eventos);
       renderEventos(msg.fase, msg.eventos_usados, msg.situacion_actual, eventosHabilitadosActual[msg.fase]);
       renderSituacionActual(msg.situacion_actual);
-      renderMapaVisual(msg.jugadores, msg.mapa_actual, msg.npcs_revelados);
+      renderMapaVisual(msg.jugadores, msg.mapa_actual, msg.npcs_revelados, msg.fase);
       renderFormularioNpc(msg.fase, msg.mapa_actual, msg.npcs_revelados);
       renderEncuentroEnCurso(msg.npcs_revelados, msg.jugadores);
       renderNpcsRevelados(msg.npcs_revelados, msg.jugadores, msg.mapa_actual);
@@ -723,17 +848,26 @@ function conectarWs() {
   };
 }
 
-document.getElementById("lista-jugadores").addEventListener("click", (e) => {
+document.getElementById("riel-jugadores").addEventListener("click", (e) => {
+  const abre = e.target.closest("[data-abre]");
+  if (abre) {
+    const id = abre.dataset.abre;
+    menuJugadorAbierto = menuJugadorAbierto === id ? null : id;
+    document.querySelectorAll(".jugador-menu").forEach((m) => {
+      m.dataset.abierto = String(m.dataset.menu === menuJugadorAbierto);
+    });
+    return;
+  }
+
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
 
   if (btn.dataset.action === "menos" || btn.dataset.action === "mas") {
-    const delta = btn.dataset.action === "mas" ? 1 : -1;
-    ajustarNa(btn.dataset.player, delta);
+    ajustarNa(btn.dataset.player, btn.dataset.action === "mas" ? 1 : -1);
   }
 
   if (btn.dataset.action === "repartir-prenda") {
-    const select = btn.parentElement.querySelector(".select-prenda");
+    const select = btn.closest(".jugador-menu").querySelector(".select-prenda");
     const prendaId = select.value === "" ? null : Number(select.value);
     repartirPrenda(btn.dataset.player, prendaId);
   }
@@ -742,26 +876,37 @@ document.getElementById("lista-jugadores").addEventListener("click", (e) => {
     resolverPrenda(btn.dataset.player, btn.dataset.prenda);
   }
 
-  if (btn.dataset.action === "mover-jugador") {
-    const select = btn.parentElement.querySelector(".select-zona");
-    moverJugador(btn.dataset.player, select.value);
-  }
-
   if (btn.dataset.action === "toggle-debilidad") {
     toggleDebilidad(btn.dataset.player, btn.dataset.activa === "true");
   }
 });
 
-document.getElementById("mapa-visual").addEventListener("click", (e) => {
-  const btn = e.target.closest('button[data-action="ocultar-npc"]');
-  if (!btn) return;
-  ocultarNpc(btn.dataset.npc);
+// "Mover a" no tiene botón de confirmar: el select dispara el movimiento en su
+// propio onchange (a diferencia de "Repartir prenda", que sí necesita un botón
+// porque ahí hay que elegir prenda + random antes de confirmar).
+document.getElementById("riel-jugadores").addEventListener("change", (e) => {
+  if (e.target.classList.contains("select-zona")) {
+    moverJugador(e.target.dataset.player, e.target.value);
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!menuJugadorAbierto) return;
+  if (e.target.closest(".jugador-menu") || e.target.closest("[data-abre]")) return;
+  menuJugadorAbierto = null;
+  document.querySelectorAll(".jugador-menu").forEach((m) => (m.dataset.abierto = "false"));
 });
 
 document.getElementById("btn-revelar-npc").addEventListener("click", () => {
   const npcId = document.getElementById("select-npc").value;
   const zona = document.getElementById("select-zona-npc").value;
   revelarNpc(npcId, zona);
+});
+
+document.getElementById("encuentro-en-curso").addEventListener("click", (e) => {
+  const btn = e.target.closest('button[data-action="resolver-ronda-encare"]');
+  if (!btn) return;
+  resolverRondaEncare(btn.dataset.npc, Number(btn.dataset.modificador));
 });
 
 document.getElementById("lista-npcs-revelados").addEventListener("click", (e) => {
@@ -780,6 +925,10 @@ document.getElementById("lista-npcs-revelados").addEventListener("click", (e) =>
 
 document.getElementById("btn-situacion-random").addEventListener("click", () => siguienteSituacion("random"));
 
+document.getElementById("btn-elegir-situacion").addEventListener("click", () => {
+  document.getElementById("card-eventos").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
 document.getElementById("btn-avanzar-fase").addEventListener("click", avanzarFase);
 
 document.getElementById("btn-retroceder-fase").addEventListener("click", retrocederFase);
@@ -792,10 +941,15 @@ document.getElementById("btn-narrar-ia").addEventListener("click", (e) => {
 
 document.getElementById("btn-crear-partida").addEventListener("click", crearPartida);
 
-document.getElementById("btn-nueva-partida").addEventListener("click", () => {
-  if (confirm("¿Crear una partida nueva? Se van a desconectar todos los jugadores actuales.")) {
-    crearPartida();
-  }
+document.getElementById("btn-nueva-partida").addEventListener("click", confirmarNuevaPartida);
+document.getElementById("btn-nueva-partida-dash").addEventListener("click", confirmarNuevaPartida);
+
+document.getElementById("btn-puntaje").addEventListener("click", () => {
+  document.getElementById("overlay-puntaje").classList.remove("oculto");
+});
+
+document.getElementById("btn-cerrar-puntaje-dm").addEventListener("click", () => {
+  document.getElementById("overlay-puntaje").classList.add("oculto");
 });
 
 document.getElementById("config-mapas").addEventListener("change", (e) => {
@@ -885,19 +1039,6 @@ function poblarSelectDummyPersonaje() {
   select.innerHTML = personajes.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("");
 }
 
-function initTabs() {
-  const botones = document.querySelectorAll(".dm-tab-btn");
-  const paneles = document.querySelectorAll(".dm-tab-panel");
-
-  function activarTab(tab) {
-    botones.forEach((b) => b.classList.toggle("dm-tab-btn-activo", b.dataset.tab === tab));
-    paneles.forEach((p) => p.classList.toggle("oculto", p.dataset.tabPanel !== tab));
-  }
-
-  botones.forEach((b) => b.addEventListener("click", () => activarTab(b.dataset.tab)));
-  activarTab(botones[0].dataset.tab);
-}
-
 (async function init() {
   await cargarPersonajes();
   await cargarPrendas();
@@ -906,6 +1047,5 @@ function initTabs() {
   await cargarNpcs();
   await cargarCartas();
   poblarSelectDummyPersonaje();
-  initTabs();
   conectarWs();
 })();

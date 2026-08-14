@@ -200,13 +200,14 @@ def test_intentar_situacion_fallida_no_suma_puntaje_pero_queda_en_el_historial(m
     assert jugador["historial"] == [{"tipo": "situacion", "nombre": situacion["titulo"], "exito": False, "puntos": 0}]
 
 
-def test_intentar_encare_de_levante_exitoso_suma_el_puntaje_lindura(monkeypatch):
+def test_encare_de_levante_exitoso_suma_el_puntaje_lindura(monkeypatch):
     _forzar_total(monkeypatch, 999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("morocho_after", "living")
     gs.iniciar_encuentro("morocho_after", player_id)
 
-    resultado = gs.intentar_encare(player_id, "morocho_after", opcion_idx=0)
+    gs.elegir_opcion_encare(player_id, "morocho_after", opcion_idx=0)
+    resultado = gs.resolver_ronda_encare("morocho_after")
 
     jugador = gs.game_state["jugadores"][player_id]
     assert resultado["resuelto"] is True
@@ -216,13 +217,14 @@ def test_intentar_encare_de_levante_exitoso_suma_el_puntaje_lindura(monkeypatch)
     ]
 
 
-def test_intentar_encare_de_confrontacion_exitosa_suma_un_punto(monkeypatch):
+def test_encare_de_confrontacion_exitosa_suma_un_punto(monkeypatch):
     _forzar_total(monkeypatch, 999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    gs.intentar_encare(player_id, "hermano_mayor", opcion_idx=0)
+    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
+    gs.resolver_ronda_encare("hermano_mayor")
 
     jugador = gs.game_state["jugadores"][player_id]
     assert jugador["puntaje"] == 1
@@ -231,13 +233,14 @@ def test_intentar_encare_de_confrontacion_exitosa_suma_un_punto(monkeypatch):
     ]
 
 
-def test_intentar_encare_fallido_no_suma_puntos_pero_registra_el_fracaso(monkeypatch):
+def test_encare_fallido_no_suma_puntos_pero_registra_el_fracaso(monkeypatch):
     _forzar_total(monkeypatch, -999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    gs.intentar_encare(player_id, "hermano_mayor", opcion_idx=0)
+    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
+    gs.resolver_ronda_encare("hermano_mayor")
 
     jugador = gs.game_state["jugadores"][player_id]
     assert jugador["puntaje"] == 0
@@ -246,19 +249,51 @@ def test_intentar_encare_fallido_no_suma_puntos_pero_registra_el_fracaso(monkeyp
     ]
 
 
-def test_intentar_encare_de_varias_rondas_solo_registra_el_resultado_una_vez(monkeypatch):
+def test_encare_de_varias_rondas_solo_registra_el_resultado_una_vez(monkeypatch):
     _forzar_total(monkeypatch, 999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("sofia", "living")
     gs.iniciar_encuentro("sofia", player_id)
     jugador = gs.game_state["jugadores"][player_id]
 
-    resultado_ronda_1 = gs.intentar_encare(player_id, "sofia", opcion_idx=0)
+    gs.elegir_opcion_encare(player_id, "sofia", opcion_idx=0)
+    resultado_ronda_1 = gs.resolver_ronda_encare("sofia")
     assert resultado_ronda_1["resuelto"] is False
     assert jugador["puntaje"] == 0
     assert jugador["historial"] == []
 
-    resultado_ronda_2 = gs.intentar_encare(player_id, "sofia", opcion_idx=0)
+    gs.elegir_opcion_encare(player_id, "sofia", opcion_idx=0)
+    resultado_ronda_2 = gs.resolver_ronda_encare("sofia")
     assert resultado_ronda_2["resuelto"] is True
     assert jugador["puntaje"] == 6  # puntaje_lindura de sofía
     assert len(jugador["historial"]) == 1
+
+
+def test_modificador_dm_puede_convertir_un_fracaso_en_exito(monkeypatch):
+    """El DM juzga que la frase estuvo buenísima: el bonus alcanza para pasar la dificultad."""
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("hermano_mayor", "living")
+    gs.iniciar_encuentro("hermano_mayor", player_id)
+
+    _forzar_total(monkeypatch, 8)  # 8 < 11 (dificultad de hermano_mayor): solo, sería fracaso
+    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
+    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=4)
+
+    assert resultado["total_ajustado"] == 12
+    assert resultado["exito"] is True
+    assert gs.game_state["jugadores"][player_id]["puntaje"] == 1
+
+
+def test_modificador_dm_puede_convertir_un_exito_en_fracaso(monkeypatch):
+    """El DM juzga que la frase fue un papelón: el malus tira abajo lo que iba a ser éxito."""
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("hermano_mayor", "living")
+    gs.iniciar_encuentro("hermano_mayor", player_id)
+
+    _forzar_total(monkeypatch, 12)  # 12 >= 11: solo, sería éxito
+    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
+    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=-4)
+
+    assert resultado["total_ajustado"] == 8
+    assert resultado["exito"] is False
+    assert gs.game_state["jugadores"][player_id]["puntaje"] == 0

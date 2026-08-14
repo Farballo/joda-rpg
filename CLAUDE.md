@@ -81,8 +81,12 @@ static/jugador.html      # vista del jugador (mobile-first)
    Lo mismo pasó después con el árbol de decisiones por rondas y el
    puntaje total de la noche — sección 2, filas "Encare por rondas" y
    "Puntaje total de la noche", y milestone 13: reemplaza la tirada única
-   de `intentar_levante`/`intentar_confrontacion` por `intentar_encare`,
-   que camina 1 a 3 rondas encadenadas y acumula antes de resolver.)*
+   de `intentar_levante`/`intentar_confrontacion` por `elegir_opcion_encare`
+   + `resolver_ronda_encare`, que caminan 1 a 3 rondas encadenadas y
+   acumulan antes de resolver. Y de nuevo con el ajuste de dificultad en
+   vivo del DM — sección 2, fila "Ajuste de dificultad en vivo del DM":
+   el jugador improvisa su frase en voz alta y la ronda queda `pendiente`
+   sin tirar los dados hasta que el DM la juzga con un `modificador_dm`.)*
 
 3.1. **Los encuentros de NPC (levante/confrontación) son por turnos, el
    resto del juego no.** Tiradas libres, NA, prendas y situaciones de fase

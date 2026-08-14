@@ -15,13 +15,13 @@ from game_state import (
     crear_jugador,
     crear_partida,
     desactivar_debilidad,
+    elegir_opcion_encare,
     expulsar_jugador,
     game_state,
     get_npc,
     get_personaje,
     iniciar_encuentro,
     iniciar_partida,
-    intentar_encare,
     intentar_situacion,
     mover_jugador,
     npcs_revelados_para_jugador,
@@ -29,6 +29,7 @@ from game_state import (
     registrar_tirada,
     repartir_prenda,
     resolver_prenda,
+    resolver_ronda_encare,
     retroceder_fase,
     revelar_npc,
     siguiente_situacion,
@@ -376,6 +377,32 @@ async def ws_dm(websocket: WebSocket):
                 await broadcast_estado_dm()
                 await broadcast_ocultar_carta_npc(npc_id)
 
+            elif msg.get("type") == "resolver_ronda_encare":
+                npc_id = msg.get("npc_id")
+
+                try:
+                    resultado = resolver_ronda_encare(npc_id, msg.get("modificador_dm", 0))
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
+                jugador_objetivo = resultado["jugador_objetivo"]
+                if resultado["resuelto"]:
+                    npc = get_npc(npc_id)
+                    registrar_tirada(
+                        jugador_objetivo, resultado["stat"], {**resultado, "total": resultado["total_ajustado"]}, npc["nombre"]
+                    )
+
+                ws_jugador = player_connections.get(jugador_objetivo)
+                if ws_jugador is not None:
+                    try:
+                        await ws_jugador.send_json({"type": "resultado_encare", **resultado})
+                    except Exception:
+                        player_connections.pop(jugador_objetivo, None)
+
+                await enviar_estado_jugador(jugador_objetivo)
+                await broadcast_estado_dm()
+
             elif msg.get("type") == "ocultar_npc":
                 ocultar_npc(msg.get("npc_id"))
                 await broadcast_estado_todos_jugadores()
@@ -445,20 +472,17 @@ async def ws_player(websocket: WebSocket, player_id: str):
                 await broadcast_estado_dm()
                 await broadcast_ocultar_carta_npc(npc_id)
 
-            elif msg.get("type") == "intentar_encare":
+            elif msg.get("type") == "elegir_opcion_encare":
                 try:
-                    resultado = intentar_encare(
+                    elegir_opcion_encare(
                         player_id, msg.get("npc_id"), msg.get("opcion_idx"), msg.get("stat_otro")
                     )
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                if resultado["resuelto"]:
-                    npc = get_npc(msg.get("npc_id"))
-                    registrar_tirada(player_id, resultado["stat"], resultado, npc["nombre"])
-
-                await websocket.send_json({"type": "resultado_encare", **resultado})
+                # todavía no se tira nada: el jugador dice su frase en voz alta y el DM
+                # la juzga con "resolver_ronda_encare" (WS /ws/dm), que sí tira los dados
                 await enviar_estado_jugador(player_id)
                 await broadcast_estado_dm()
 

@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="pagina-dm" data-fase="previa">
-  <div class="dm-topbar">
+  <header class="dm-topbar" id="topbar-simple">
     <div>
       <div class="dm-logo">JODA RPG</div>
       <div class="dm-sub">Panel del DM</div>
@@ -15,7 +15,7 @@
       <button id="btn-nueva-partida" type="button" class="oculto">🔄 Nueva partida</button>
       <div class="dm-fase-pill" id="fase-actual">-</div>
     </div>
-  </div>
+  </header>
 
   <div id="dm-error" class="oculto"></div>
 
@@ -54,84 +54,129 @@
     <button id="btn-empezar-partida" type="button">▶️ Empezar partida</button>
   </div>
 
-  <div class="dm-grid oculto" id="dm-dashboard">
-    <section class="dm-col-jugadores dm-card">
-      <h2>Jugadores</h2>
-      <ul id="lista-jugadores">
-        <li>Cargando...</li>
-      </ul>
-    </section>
+  <div class="dashboard-shell oculto" id="dashboard-shell">
+    <header class="dm-topbar-v2" id="topbar-dashboard">
+      <div class="brand"><b>JODA RPG</b> <span>Panel del DM</span></div>
 
-    <main class="dm-col-central">
-      <section class="dm-card">
-        <div class="dm-card-head">
-          <h2>Situación actual</h2>
-          <div class="dm-card-head-botones">
-            <button id="btn-retroceder-fase" type="button">⬅️ Volver fase</button>
-            <button id="btn-avanzar-fase" type="button">⚡ Avanzar fase</button>
+      <div class="sala-chip">📶 Sala abierta · <b id="sala-chip-host">-</b> · <span id="sala-chip-conectados">0</span> conectados</div>
+
+      <div class="fase-stepper">
+        <button id="btn-retroceder-fase" type="button" title="Volver a la fase anterior (deshabilitado en Previa)">⬅</button>
+        <ol class="fase-pasos">
+          <li class="fase-paso" data-fase="previa">Previa</li>
+          <li class="fase-paso" data-fase="boliche">Boliche</li>
+          <li class="fase-paso" data-fase="after">After</li>
+        </ol>
+        <button id="btn-avanzar-fase" type="button" class="btn-primario" title="Pasa a la siguiente fase de la noche y sortea un mapa nuevo para ella">⚡ Avanzar fase</button>
+        <button id="btn-puntaje" type="button" title="Ver el ranking y el historial de puntos de la noche">🏆</button>
+        <button id="btn-nueva-partida-dash" type="button" title="Empezar una partida nueva (desconecta a todos los jugadores actuales)">🔄</button>
+      </div>
+    </header>
+
+    <div class="app-dashboard" id="dm-dashboard">
+    <div class="tablero">
+
+      <!-- ---- columna 1: situación + cola de eventos ---- -->
+      <div class="columna">
+        <section class="dm-card">
+          <div class="dm-card-head">
+            <h2 class="card-titulo">Situación actual</h2>
+            <span class="pill" id="pill-eventos-usados"></span>
           </div>
-        </div>
-        <div id="situacion-actual-card"></div>
-        <button id="btn-situacion-random" type="button">🎲 Situación aleatoria</button>
-      </section>
+          <div id="situacion-actual-card"></div>
+          <div class="situacion-acciones">
+            <button id="btn-situacion-random" type="button" class="btn-acento" title="Elige una situación al azar entre las que todavía no se usaron">🎲 Siguiente situación</button>
+            <button id="btn-elegir-situacion" type="button" title="Bajar a la lista de situaciones para elegir una a mano">📋 Elegir…</button>
+          </div>
+        </section>
 
-      <section class="dm-card">
-        <h2 id="mapa-nombre-actual">Mapa</h2>
-        <div id="mapa-visual" class="mapa-visual"></div>
-      </section>
-    </main>
-
-    <aside class="dm-col-tabs">
-      <div class="dm-tabs-nav" id="dm-tabs-nav">
-        <button type="button" class="dm-tab-btn" data-tab="eventos">📋 Eventos</button>
-        <button type="button" class="dm-tab-btn" data-tab="npc">🎭 NPCs</button>
-        <button type="button" class="dm-tab-btn" data-tab="ia">🪄 Narrador IA</button>
-        <button type="button" class="dm-tab-btn" data-tab="tiradas">🎲 Tiradas</button>
-        <button type="button" class="dm-tab-btn" data-tab="puntaje">🏆 Puntaje</button>
+        <section class="dm-card card-scroll" id="card-eventos" style="flex:1">
+          <div class="dm-card-head">
+            <h2 class="card-titulo">Situaciones de la fase</h2>
+            <span class="pill" id="pill-eventos-total"></span>
+          </div>
+          <div id="lista-eventos"></div>
+        </section>
       </div>
 
-      <section class="dm-card dm-tab-panel" data-tab-panel="eventos">
-        <h2>Eventos de la fase</h2>
-        <div id="lista-eventos"></div>
-      </section>
+      <!-- ---- columna 2: mapa + tiradas en vivo ---- -->
+      <div class="columna col-mapa">
+        <section class="dm-card mapa-card">
+          <div class="dm-card-head">
+            <h2 class="mapa-nombre" id="mapa-nombre-actual">Mapa</h2>
+            <span class="pill" id="pill-mapa-resumen"></span>
+          </div>
+          <div id="mapa-visual" class="mapa-lienzo"></div>
+          <div class="mapa-leyenda">
+            <span><i class="punto" style="background:var(--cyan)"></i> jugadores</span>
+            <span><i class="punto" style="background:var(--pink)"></i> NPC importante</span>
+            <span><i class="punto" style="background:var(--violet)"></i> encuentro en curso</span>
+          </div>
+        </section>
 
-      <section class="dm-card dm-tab-panel" data-tab-panel="npc">
-        <h2>Revelar NPC</h2>
-        <p class="dm-hint">Aparece en el mapa para todos. Si es de levante o confrontación, después le arrancás el encuentro a un jugador desde la lista de abajo.</p>
-        <div class="revelar-npc-form">
-          <select id="select-npc"></select>
-          <select id="select-zona-npc"></select>
-          <button id="btn-revelar-npc" type="button">Revelar</button>
-        </div>
+        <section class="dm-card card-scroll" style="flex:1">
+          <div class="dm-card-head">
+            <h2 class="card-titulo">Tiradas en vivo</h2>
+            <span class="pill">se actualiza solo</span>
+          </div>
+          <div id="log-eventos">
+            <p>Cargando...</p>
+          </div>
+        </section>
+      </div>
 
-        <div id="encuentro-en-curso"></div>
+      <!-- ---- columna 3: NPCs + narrador IA ---- -->
+      <div class="columna">
+        <section class="dm-card card-scroll" style="flex:1">
+          <div class="dm-card-head">
+            <h2 class="card-titulo">Revelar NPC</h2>
+            <span class="pill" id="pill-npcs-mazo"></span>
+          </div>
+          <p class="dm-hint">Aparece en el mapa para todos. Si es de levante o confrontación, después le arrancás el encuentro a un jugador desde la lista de abajo.</p>
+          <div class="revelar-npc-form">
+            <select id="select-npc" title="Elegí qué NPC del mazo de esta fase aparece"></select>
+            <select id="select-zona-npc" title="Elegí en qué zona del mapa aparece"></select>
+            <button id="btn-revelar-npc" type="button" class="btn-primario" title="Lo muestra en el mapa para todos los jugadores conectados">Revelar</button>
+          </div>
 
-        <h2>En escena</h2>
-        <div id="lista-npcs-revelados"></div>
-      </section>
+          <div id="encuentro-en-curso"></div>
 
-      <section class="dm-card dm-tab-panel" data-tab-panel="ia">
-        <h2>Narrador IA</h2>
-        <textarea id="narrar-prompt-extra" placeholder="Contexto extra (opcional): ej. Facu falló Carisma feo, Juli está en Modo Caos..."></textarea>
-        <button id="btn-narrar-ia" type="button">🪄 Narrar con IA</button>
-        <div id="resultado-narracion" class="oculto">
-          <p id="narracion-texto"></p>
-          <button id="btn-broadcast-narracion" type="button">📢 Compartir con todos</button>
-        </div>
-      </section>
+          <div class="dm-card-head" style="margin-top:0.85rem">
+            <h2 class="card-titulo">En escena</h2>
+            <span class="pill" id="pill-npcs-escena"></span>
+          </div>
+          <div id="lista-npcs-revelados"></div>
+        </section>
 
-      <section class="dm-card dm-tab-panel" data-tab-panel="tiradas">
-        <h2>Tiradas</h2>
-        <ul id="log-eventos">
-          <li>Cargando...</li>
-        </ul>
-      </section>
+        <section class="dm-card">
+          <div class="dm-card-head">
+            <h2 class="card-titulo">Narrador IA</h2>
+          </div>
+          <textarea id="narrar-prompt-extra" placeholder="Contexto extra (opcional): ej. Facu falló Carisma feo, Juli está en Modo Caos..." title="Datos extra para que Ollama los tenga en cuenta al narrar"></textarea>
+          <button id="btn-narrar-ia" type="button" title="Le pide a Ollama una narración de la situación actual (solo la ves vos hasta que la compartas)">🪄 Narrar con IA</button>
+          <div id="resultado-narracion" class="oculto">
+            <p id="narracion-texto"></p>
+            <button id="btn-broadcast-narracion" type="button" title="Manda esta narración a la pantalla de todos los jugadores">📢 Compartir con todos</button>
+          </div>
+        </section>
+      </div>
+    </div>
 
-      <section class="dm-card dm-tab-panel" data-tab-panel="puntaje">
-        <h2>Puntaje de la noche</h2>
-        <div id="ranking-puntaje"></div>
-      </section>
-    </aside>
+    <!-- ---- riel de jugadores ---- -->
+    <footer class="riel" id="riel-jugadores">
+      <p>Cargando...</p>
+    </footer>
+    </div>
+  </div>
+
+  <div id="overlay-puntaje" class="oculto">
+    <div class="mi-carta-overlay-inner overlay-puntaje-inner">
+      <div class="dm-card-head">
+        <h2>🏆 Puntaje de la noche</h2>
+        <button type="button" class="btn-x" id="btn-cerrar-puntaje-dm" title="Cerrar">✕</button>
+      </div>
+      <div id="ranking-puntaje"></div>
+    </div>
   </div>
 
   <script src="/static/carta.js"></script>

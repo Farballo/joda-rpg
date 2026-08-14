@@ -402,16 +402,6 @@ function renderMapaJugador(mapaActual, jugadoresEnMapa, npcsRevelados, miPlayerI
     .join("");
 }
 
-function intentarEncare(npcId, opcionIdx, statOtro) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({
-    type: "intentar_encare",
-    npc_id: npcId,
-    opcion_idx: opcionIdx === undefined ? null : opcionIdx,
-    stat_otro: statOtro === undefined ? null : statOtro,
-  }));
-}
-
 function hablarConNpc(npcId) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({ type: "hablar_con_npc", npc_id: npcId }));
@@ -452,7 +442,8 @@ function ocultarCartaNpc() {
   document.getElementById("npc-card-overlay").classList.add("oculto");
 }
 
-// npc_id del encuentro que está en pantalla, para no re-renderizarlo en cada `estado`
+// qué se está mostrando del encuentro en pantalla ("<npc_id>:nodo" o "<npc_id>:espera"),
+// para no re-renderizarlo en cada `estado` salvo que cambie de verdad
 let encuentroEnPantalla = null;
 // mientras se muestra el resultado de la tirada, `estado` no puede cerrar el overlay
 let mostrandoResultadoEncuentro = false;
@@ -479,6 +470,9 @@ function renderNodoEncuentro(npc, nodo) {
         ? `<p class="lindura-misterio">❓ Estás demasiado en pedo para reconocerlo...</p>`
         : `<p class="lindura-valor">Atractivo: ${npc.puntaje_lindura} / 10</p>`;
 
+  const dificultadPorRonda = npc.tipo === "levante" ? npc.dificultad_chamuyo : npc.dificultad;
+  document.getElementById("encuentro-dificultad").textContent = `🎯 Dificultad: ${dificultadPorRonda} por ronda`;
+
   const acciones = document.getElementById("encuentro-actions");
   const opcionesHtml = nodo.opciones
     .map((op, i) => `<button type="button" class="btn-opcion-confrontacion" data-idx="${i}">${op.texto}</button>`)
@@ -501,20 +495,48 @@ function renderNodoEncuentro(npc, nodo) {
   `;
 
   acciones.querySelectorAll(".btn-opcion-confrontacion").forEach((btn) => {
-    btn.addEventListener("click", () => intentarEncare(npc.id, Number(btn.dataset.idx), null));
+    btn.addEventListener("click", () => elegirOpcionEncare(npc.id, Number(btn.dataset.idx), null));
   });
 
   document.getElementById("btn-encuentro-otro").addEventListener("click", () => {
     if (npc.tipo === "levante") {
-      intentarEncare(npc.id, null, "carisma");
+      elegirOpcionEncare(npc.id, null, "carisma");
     } else {
       document.getElementById("encuentro-otro-stats").classList.remove("oculto");
     }
   });
 
   acciones.querySelectorAll(".btn-opcion-otro").forEach((btn) => {
-    btn.addEventListener("click", () => intentarEncare(npc.id, null, btn.dataset.stat));
+    btn.addEventListener("click", () => elegirOpcionEncare(npc.id, null, btn.dataset.stat));
   });
+}
+
+/* Entre elegir la opción y que el DM la resuelva, el jugador dice su frase en voz alta
+   en la mesa — el server no necesita saber qué dijo, solo que hay una ronda pendiente. */
+function renderEsperandoDm(npc) {
+  document.getElementById("encuentro-avatar").textContent = npc.avatar;
+  document.getElementById("encuentro-nombre").textContent = npc.nombre;
+  document.getElementById("encuentro-apodo").textContent = npc.apodo;
+  document.getElementById("encuentro-frase").textContent = "";
+  document.getElementById("encuentro-lindura").innerHTML = "";
+  document.getElementById("encuentro-actions").innerHTML = `
+    <p class="encuentro-esperando-dm">🎙️ Decilo en voz alta — el DM está evaluando cómo te fue...</p>`;
+}
+
+function elegirOpcionEncare(npcId, opcionIdx, statOtro) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({
+    type: "elegir_opcion_encare",
+    npc_id: npcId,
+    opcion_idx: opcionIdx === undefined ? null : opcionIdx,
+    stat_otro: statOtro === undefined ? null : statOtro,
+  }));
+
+  const npc = ultimosNpcsRevelados[npcId] && ultimosNpcsRevelados[npcId].encuentro.npc;
+  if (npc) {
+    encuentroEnPantalla = `${npcId}:espera`;
+    renderEsperandoDm(npc);
+  }
 }
 
 function renderEncuentro(npcsRevelados) {
@@ -529,23 +551,45 @@ function renderEncuentro(npcsRevelados) {
     overlay.classList.add("oculto");
     return;
   }
-  if (pendiente.npcId === encuentroEnPantalla) return;
 
-  encuentroEnPantalla = pendiente.npcId;
-  renderNodoEncuentro(pendiente.npc, pendiente.nodo);
+  const clave = `${pendiente.npcId}:${pendiente.pendiente ? "espera" : "nodo"}`;
+  if (clave === encuentroEnPantalla) return;
+  encuentroEnPantalla = clave;
+
+  if (pendiente.pendiente) {
+    renderEsperandoDm(pendiente.npc);
+  } else {
+    renderNodoEncuentro(pendiente.npc, pendiente.nodo);
+  }
   overlay.classList.remove("oculto");
+}
+
+function textoDadoEncare(msg) {
+  const [d1, d2] = msg.dados_tirados;
+  let texto = `🎲 ${d1} + ${d2} → ${msg.total}`;
+  if (msg.modificador_dm) {
+    const signo = msg.modificador_dm >= 0 ? "+" : "";
+    texto += ` (DM ${signo}${msg.modificador_dm} → ${msg.total_ajustado})`;
+  }
+  return texto;
 }
 
 function mostrarResultadoEncare(msg) {
   mostrandoResultadoEncuentro = true;
+  const dadoTexto = textoDadoEncare(msg);
 
   if (!msg.resuelto) {
-    document.getElementById("encuentro-actions").innerHTML = `<p>${msg.respuesta || ""}</p>`;
+    document.getElementById("encuentro-actions").innerHTML = `
+      <p class="encuentro-dado-resultado">${dadoTexto}</p>
+      <p>${msg.respuesta || ""}</p>`;
     setTimeout(() => {
       mostrandoResultadoEncuentro = false;
       const npc = ultimosNpcsRevelados[msg.npc_id] && ultimosNpcsRevelados[msg.npc_id].encuentro.npc;
-      if (npc) renderNodoEncuentro(npc, msg.siguiente_nodo);
-    }, 1400);
+      if (npc) {
+        encuentroEnPantalla = `${msg.npc_id}:nodo`;
+        renderNodoEncuentro(npc, msg.siguiente_nodo);
+      }
+    }, 2000);
     return;
   }
 
@@ -554,6 +598,7 @@ function mostrarResultadoEncare(msg) {
     document.getElementById("encuentro-lindura").innerHTML = `<p class="lindura-valor">Atractivo real: ${msg.puntaje_lindura} / 10</p>`;
   }
   document.getElementById("encuentro-actions").innerHTML = `
+    <p class="encuentro-dado-resultado">${dadoTexto}</p>
     <p>${msg.respuesta ? `${msg.respuesta}<br>` : ""}Acumulado ${msg.acumulado} vs dificultad ${msg.dificultad_total}.</p>
     <p>${exitoTexto}</p>
     <button type="button" id="btn-cerrar-encuentro">Cerrar</button>`;

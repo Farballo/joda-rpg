@@ -110,7 +110,7 @@ form#form-join > button[type="submit"] {
 }
 
 /* !important a propósito: .oculto es una clase utilitaria que tiene que
-   ganarle a cualquier otra regla de display (como .dm-grid o el
+   ganarle a cualquier otra regla de display (como .tablero o el
    #npc-card-overlay:not(.oculto) de más abajo), sin importar el orden en
    que aparezcan en este archivo. Ya nos mordió dos veces no tenerlo. */
 .oculto {
@@ -145,118 +145,6 @@ form#form-join > button[type="submit"] {
   transition: width 0.3s ease;
 }
 
-.player-card {
-  list-style: none;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 0.85rem;
-  margin-bottom: 0.6rem;
-}
-
-.player-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 0.5rem;
-}
-
-.player-head strong {
-  font-size: 1.05rem;
-}
-
-.player-head span {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.na-label {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin: 0.4rem 0;
-}
-
-.na-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.na-controls button {
-  flex: 1;
-  padding: 0.5rem;
-}
-
-.debilidad-controls {
-  margin-top: 0.4rem;
-}
-
-.debilidad-controls button {
-  width: 100%;
-  padding: 0.5rem;
-}
-
-.btn-debilidad-activa {
-  background: linear-gradient(135deg, #4a1420, #1e0a0f);
-  border: 1px solid var(--danger);
-  color: #fff;
-}
-
-#lista-jugadores {
-  list-style: none;
-  padding: 0;
-}
-
-.prendas-activas {
-  margin: 0.5rem 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.sin-prenda {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.prenda-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: #21101d;
-  color: #ff72b7;
-  border: 1px solid var(--pink);
-  border-radius: 99px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.8rem;
-  cursor: help;
-}
-
-.prenda-tag button {
-  border: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  font-weight: bold;
-  padding: 0;
-}
-
-.prenda-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-}
-
-.prenda-controls select {
-  flex: 1 1 100%;
-  min-width: 130px;
-}
-
-.prenda-controls button {
-  flex: 1 1 100%;
-  padding: 0.5rem;
-}
-
 .prenda-card {
   background: linear-gradient(135deg, #21101d, var(--panel));
   border: 1px solid var(--pink);
@@ -284,43 +172,10 @@ form#form-join > button[type="submit"] {
   border: none;
 }
 
-#btn-avanzar-fase {
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-  font-weight: 800;
-  background: linear-gradient(90deg, var(--pink), var(--violet));
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 1rem;
-}
-
-#btn-avanzar-fase:disabled {
-  background: var(--panel2);
-  color: var(--muted);
-  cursor: not-allowed;
-}
-
-.evento-card {
-  border-left: 4px solid var(--cyan);
-  border-top: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-  border-radius: 8px;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
 .evento-titulo {
   font-weight: 800;
   margin-bottom: 0.3rem;
   color: var(--text);
-}
-
-.evento-card p {
-  margin: 0;
 }
 
 #modo-caos {
@@ -375,22 +230,6 @@ form#form-join > button[type="submit"] {
 #debilidad-activa .consecuencia {
   margin-top: 0.5rem;
   color: #ddd;
-}
-
-.zona-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-}
-
-.zona-controls select {
-  flex: 1;
-  min-width: 110px;
-}
-
-.zona-controls button {
-  padding: 0.5rem;
 }
 
 .zona-card {
@@ -470,19 +309,10 @@ form#form-join > button[type="submit"] {
 }
 
 .revelar-npc-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.revelar-npc-form select {
-  flex: 1;
-  min-width: 110px;
-}
-
-.revelar-npc-form button {
-  padding: 0.5rem 1rem;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr auto;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
 }
 
 #npc-card-overlay {
@@ -596,6 +426,12 @@ form#form-join > button[type="submit"] {
   margin: 0;
 }
 
+.encuentro-esperando-dm {
+  color: var(--yellow);
+  font-weight: 700;
+  animation: tirada-shake 1.2s ease-in-out infinite alternate;
+}
+
 #btn-npc-hablar,
 #btn-intentar-levante {
   background: var(--pink);
@@ -685,6 +521,19 @@ form#form-join > button[type="submit"] {
   margin: 0.5rem 0;
 }
 
+.encuentro-dificultad {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin: 0.3rem 0 0.75rem;
+}
+
+.encuentro-dado-resultado {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+}
+
 .situacion-card {
   background: var(--panel);
   border: 1px solid var(--yellow);
@@ -725,62 +574,15 @@ form#form-join > button[type="submit"] {
   margin: 0;
 }
 
-.situacion-meta {
-  color: var(--muted);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-top: 0.4rem;
-}
-
 .situacion-pendiente {
   color: var(--muted);
   margin: 0.5rem 0 0;
 }
 
-.situacion-opciones-dm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.opcion-pill {
-  background: var(--panel2);
-  border: 1px solid var(--yellow);
-  color: var(--yellow);
-  border-radius: 99px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.8rem;
-}
-
-.opcion-pill-otro {
-  border-color: var(--violet);
-  color: var(--violet);
-}
-
-.evento-usado {
-  opacity: 0.55;
-}
-
-.evento-activo {
-  border-color: var(--yellow);
-  box-shadow: 0 0 0 1px var(--yellow);
-}
-
 .btn-usar-evento {
-  margin-top: 0.5rem;
-  width: 100%;
-  padding: 0.5rem;
-}
-
-#btn-situacion-random {
-  width: 100%;
-  margin-bottom: 1rem;
-  background: linear-gradient(90deg, var(--yellow), var(--pink));
-  color: #1a1207;
-  font-weight: 800;
-  border: none;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .dm-hint {
@@ -803,78 +605,29 @@ form#form-join > button[type="submit"] {
   font-size: 0.9rem;
 }
 
-.encuentro-en-curso-banner {
-  background: #241033;
-  border: 1px solid var(--violet);
-  border-radius: 10px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.encuentro-en-curso-banner span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.8rem;
-  margin-top: 0.2rem;
-}
-
-.npc-revelado-card {
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.9rem;
-}
-
-.npc-revelado-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.npc-revelado-head button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0 0.2rem;
-}
-
-.npc-revelado-head button:hover {
-  color: var(--danger);
-}
-
-.npc-revelado-meta {
+.encuentro-dificultad-botones {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
-  margin: 0.4rem 0;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
 }
 
-.npc-revelado-tag {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.1rem 0.5rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.npc-revelado-nota {
-  color: var(--muted);
-  font-size: 0.8rem;
-  margin: 0.3rem 0 0;
-}
-
-.npc-revelado-pendiente {
-  color: var(--violet);
+.encuentro-dificultad-botones button {
+  flex: 1 1 auto;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--yellow);
+  background: var(--panel2);
+  color: var(--text);
   font-weight: 700;
-  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.encuentro-dificultad-botones button:hover {
+  background: var(--yellow);
+  color: #241a06;
 }
 
 .puntaje-jugador-card {
@@ -895,24 +648,6 @@ form#form-join > button[type="submit"] {
   padding-left: 1.1rem;
   font-size: 0.85rem;
   color: var(--muted);
-}
-
-.npc-revelado-acciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-}
-
-.npc-revelado-acciones select {
-  flex: 1;
-  min-width: 100px;
-}
-
-.token-npc-encuentro {
-  border-color: var(--violet);
-  color: var(--violet);
-  background: #241033;
 }
 
 #btn-narrar-ia {
@@ -1255,80 +990,12 @@ code {
   white-space: nowrap;
 }
 
-.dm-grid {
-  display: grid;
-  grid-template-columns: 330px minmax(0, 1fr) 340px;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.dm-col-central {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  min-width: 0;
-}
-
-.dm-col-jugadores {
-  max-height: calc(100vh - 6.5rem);
-  overflow-y: auto;
-}
-
-.dm-col-tabs {
-  position: sticky;
-  top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: calc(100vh - 6.5rem);
-  min-width: 0;
-}
-
-.dm-tabs-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.dm-tab-btn {
-  flex: 1 1 auto;
-  padding: 0.55rem 0.6rem;
-  font-size: 0.8rem;
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.dm-tab-btn-activo {
-  background: linear-gradient(90deg, var(--pink), var(--violet));
-  color: #fff;
-  border-color: transparent;
-}
-
-.dm-tab-panel {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-@media (max-width: 1100px) {
-  .dm-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dm-col-jugadores,
-  .dm-col-tabs {
-    max-height: none;
-    position: static;
-  }
-}
-
 .dm-card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 1.25rem;
+  min-height: 0;
 }
 
 .dm-card h2 {
@@ -1341,81 +1008,848 @@ code {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 0.6rem;
 }
 
 .dm-card-head h2 {
   margin: 0;
 }
 
-.dm-card-head #btn-avanzar-fase {
-  margin-bottom: 0;
+/* ==========================================================================
+   Dashboard del DM v2 — tres columnas fijas (situación · mapa · NPCs/IA)
+   más un riel de jugadores abajo, sin tabs. La idea es que el DM no
+   scrollee la página durante la partida: solo las cards con .card-scroll
+   scrollean internamente cuando el contenido no entra.
+   ========================================================================== */
+
+/* dashboard-shell ocupa toda la altura disponible bajo el body (que tiene
+   padding: 1.5rem arriba y abajo → 3rem total) para que nada empuje la
+   página a scrollear: el topbar-v2 se autoajusta y .app-dashboard se lleva
+   el resto vía flex. */
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: calc(100vh - 3rem);
+  min-height: 0;
+}
+
+.dm-topbar-v2 {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(90deg, rgba(157, 66, 255, 0.13), rgba(39, 226, 210, 0.07));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.dm-topbar-v2 .brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.dm-topbar-v2 .brand b {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dm-topbar-v2 .brand span {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sala-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px dashed #37374d;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--muted);
   white-space: nowrap;
 }
 
-/* ---- Mapa visual (plano espacial, solo /dm) ---- */
-
-.mapa-visual {
-  position: relative;
-  min-height: 460px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: radial-gradient(circle at 75% 10%, rgba(157, 66, 255, 0.18), transparent 45%), var(--panel2);
-  overflow: hidden;
-}
-
-.zona-box {
-  position: absolute;
-  border: 1px solid var(--line);
-  background: rgba(16, 16, 25, 0.9);
-  border-radius: 12px;
-  padding: 0.6rem 0.75rem;
-  overflow: auto;
-}
-
-.zona-box .zona-header {
+.sala-chip b {
+  color: var(--cyan);
   font-weight: 800;
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.4rem;
 }
 
-.zona-box .zona-tokens {
+.fase-stepper {
   display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
   flex-wrap: wrap;
-  gap: 0.3rem;
 }
 
-/* La posición de cada zona ahora viene de data/mapa.json (campo "pos")
-   y se aplica inline vía JS, para soportar mapas configurables con
-   distinta cantidad/forma de zonas por variante. */
+.fase-pasos {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.2rem;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
 
-#mapa-nombre-actual {
+.fase-paso {
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.fase-paso[data-estado="hecha"] {
+  color: #6f6d7c;
+}
+
+.fase-paso[data-estado="activa"] {
+  background: linear-gradient(90deg, var(--cyan), #1fb9ae);
+  color: #04211f;
+}
+
+.btn-primario {
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  border: none;
+  color: #fff;
+}
+
+.btn-acento {
+  background: linear-gradient(90deg, var(--yellow), var(--pink));
+  border: none;
+  color: #1a1207;
+}
+
+.app-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablero {
+  display: grid;
+  grid-template-columns: 372px minmax(0, 1fr) 396px;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.columna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.tablero .dm-card {
+  padding: 0.85rem 0.95rem;
+}
+
+.card-scroll {
+  overflow-y: auto;
+}
+
+.card-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb {
+  background: #24243a;
+  border-radius: 8px;
+}
+
+.card-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-titulo {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
   margin: 0;
 }
 
-.dm-card-head-botones {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.dm-card-head-botones button {
-  margin-bottom: 0;
+.pill {
+  font-size: 0.74rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
   white-space: nowrap;
 }
 
-#btn-retroceder-fase {
-  background: transparent;
-  border: 1px solid var(--line);
+/* ---- columna 1: situación actual + cola de eventos ---- */
+
+.situacion-titulo {
+  font-size: 1.22rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.35rem;
+}
+
+.situacion-texto {
+  color: #d6d4de;
+  font-size: 0.9rem;
+  margin: 0 0 0.65rem;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pill-dificultad {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  font-weight: 800;
+}
+
+.pill-opcion {
+  border-color: #3a3a52;
+  color: #cfcdd8;
+}
+
+.pill-opcion i {
+  color: var(--cyan);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pill-otro {
+  border-color: var(--violet);
+  color: #c9a6ff;
+}
+
+.resultado-box {
+  margin-top: 0.7rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  background: rgba(255, 70, 111, 0.09);
+  border: 1px solid rgba(255, 70, 111, 0.45);
+}
+
+.resultado-box b {
   color: var(--text);
 }
 
-@media (max-width: 640px) {
-  .mapa-visual {
-    min-height: 620px;
-  }
+.situacion-acciones {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.evento-fila {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.evento-fila[data-estado="usada"] {
+  opacity: 0.5;
+}
+
+.evento-fila[data-estado="activa"] {
+  border-color: var(--yellow);
+  background: rgba(255, 216, 74, 0.08);
+}
+
+.evento-fila small {
+  color: var(--muted);
+  font-size: 0.71rem;
+}
+
+/* ---- columna 2: mapa + tiradas en vivo ---- */
+
+.mapa-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mapa-nombre {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.mapa-nombre small {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+}
+
+.mapa-lienzo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 100%;
+  margin: 0 auto;
+  border-radius: 12px;
+  background:
+    radial-gradient(700px 300px at 30% 10%, rgba(157, 66, 255, 0.12), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.014) 0 10px, transparent 10px 20px),
+    #0b0b13;
+  border: 1px solid #23233a;
+  overflow: hidden;
+}
+
+.mapa-zona {
+  position: absolute;
+  border: 1px solid #2f2f47;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.022);
+  padding: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow: auto;
+}
+
+.mapa-zona-nombre {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a8897;
+}
+
+.mapa-zona-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-content: flex-start;
+}
+
+.mapa-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.16rem 0.45rem 0.16rem 0.16rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.mapa-token .carta-thumb-img,
+.mapa-token .carta-thumb-monograma {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mapa-token .carta-thumb-img {
+  object-fit: cover;
+}
+
+.mapa-token .carta-thumb-monograma {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 900;
+  background: rgba(39, 226, 210, 0.22);
+  color: var(--cyan);
+}
+
+.mapa-token-jugador {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(39, 226, 210, 0.1);
+}
+
+.mapa-token-npc {
+  border-color: #4a4a63;
+  color: #d3d1dc;
+  background: rgba(255, 255, 255, 0.04);
+  padding-left: 0.45rem;
+}
+
+.mapa-token-npc-importante {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: rgba(255, 62, 157, 0.1);
+}
+
+.mapa-token-npc-encuentro {
+  border-color: var(--violet);
+  color: #c9a6ff;
+  background: rgba(157, 66, 255, 0.16);
+  padding-left: 0.45rem;
+}
+
+.mapa-leyenda {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.55rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.mapa-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Log de tiradas: siempre visible en la columna del mapa, es lo que el DM
+   mira para narrar el resultado. */
+.log-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.42rem 0.5rem;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  border-left: 3px solid var(--line);
+  background: rgba(255, 255, 255, 0.018);
+  margin-bottom: 0.3rem;
+}
+
+.log-item small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.72rem;
+}
+
+.log-total {
+  font-weight: 900;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-item[data-tipo="papelon"] {
+  border-left-color: var(--danger);
+  background: rgba(255, 70, 111, 0.08);
+}
+
+.log-item[data-tipo="papelon"] .log-total {
+  color: var(--danger);
+}
+
+.log-item[data-tipo="bonus"] {
+  border-left-color: var(--yellow);
+  background: rgba(255, 216, 74, 0.07);
+}
+
+.log-item[data-tipo="bonus"] .log-total {
+  color: var(--yellow);
+}
+
+/* ---- columna 3: NPCs + narrador IA ---- */
+
+.banner-encuentro {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 11px;
+  background: rgba(157, 66, 255, 0.13);
+  border: 1px solid var(--violet);
+  font-size: 0.8rem;
+  margin-top: 0.75rem;
+}
+
+.banner-encuentro b {
+  color: var(--text);
+}
+
+.banner-encuentro small {
+  display: block;
+  color: #b9a8d6;
+  font-size: 0.71rem;
+  margin-top: 0.15rem;
+}
+
+.banner-encuentro-pendiente {
+  background: rgba(255, 216, 74, 0.1);
+  border-color: var(--yellow);
+}
+
+.banner-encuentro-pendiente small {
+  color: #d8c98a;
+}
+
+.npc-fila {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  margin-bottom: 0.4rem;
+}
+
+.npc-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.npc-fila[data-estado="encuentro"] {
+  border-color: var(--violet);
+  background: rgba(157, 66, 255, 0.09);
+}
+
+.npc-nombre {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.npc-meta {
+  font-size: 0.7rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.12rem;
+}
+
+.npc-tag {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+}
+
+.npc-accion {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+
+.npc-accion select {
+  flex: 1;
+  min-width: 0;
+}
+
+.npc-accion button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.btn-x {
+  background: none;
+  border: none;
+  color: #5f5d6c;
+  font-size: 0.95rem;
+  padding: 0 0.2rem;
+  cursor: pointer;
+}
+
+.btn-x:hover {
+  color: var(--danger);
+}
+
+/* ---- riel de jugadores ---- */
+
+/* Los 6 entran de una, sin scroll: es la información que el DM mira todo
+   el tiempo y la que más se toca. */
+.riel {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.jugador {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+}
+
+.jugador[data-tramo="caos"] {
+  border-color: rgba(157, 66, 255, 0.75);
+  box-shadow: 0 0 22px rgba(157, 66, 255, 0.16) inset;
+}
+
+.jugador[data-tramo="irrecuperable"] {
+  border-color: rgba(255, 62, 157, 0.7);
+  box-shadow: 0 0 22px rgba(255, 62, 157, 0.16) inset;
+}
+
+.jugador[data-tramo="leyenda"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 26px rgba(255, 70, 111, 0.28) inset;
+}
+
+.jugador-head {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 0.6rem;
+  align-items: start;
+}
+
+.jugador-carta {
+  width: 60px;
+}
+
+.jugador-nombre {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.jugador-personaje {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.na-linea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 0.32rem;
+}
+
+.na-valor {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.na-nombre {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.na-barra {
+  height: 8px;
+  border-radius: 999px;
+  background: #1d1d2c;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.na-fill-v2 {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.na-fill-v2[data-tramo="sobrio"] { background: linear-gradient(90deg, #1fb9ae, var(--cyan)); }
+.na-fill-v2[data-tramo="alegre"] { background: linear-gradient(90deg, var(--cyan), #7ee06a); }
+.na-fill-v2[data-tramo="picante"] { background: linear-gradient(90deg, #7ee06a, var(--yellow)); }
+.na-fill-v2[data-tramo="caos"] { background: linear-gradient(90deg, var(--yellow), var(--violet)); }
+.na-fill-v2[data-tramo="irrecuperable"] { background: linear-gradient(90deg, var(--violet), var(--pink)); }
+.na-fill-v2[data-tramo="leyenda"] { background: linear-gradient(90deg, var(--pink), var(--danger), #fff); }
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-height: 22px;
+}
+
+.badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid;
+}
+
+.badge-zona { border-color: #3d3d55; color: #a9a7b6; }
+.badge-caos { border-color: var(--violet); color: #c9a6ff; background: rgba(157, 66, 255, 0.14); }
+.badge-debil { border-color: var(--yellow); color: var(--yellow); background: rgba(255, 216, 74, 0.1); }
+.badge-prenda { border-color: var(--pink); color: var(--pink); background: rgba(255, 62, 157, 0.1); }
+.badge-turno { border-color: var(--violet); color: #fff; background: var(--violet); }
+
+/* 2 filas: arriba el NA (2 botones grandes), abajo prendas/mover/debilidad (3),
+   así entran cómodos con etiqueta de texto y no solo el emoji */
+.jugador-controles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.jugador-controles-fila {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.jugador-controles-fila:first-child {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.jugador-controles-fila:last-child {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.jugador-controles-fila:first-child button {
+  padding: 0.5rem 0.2rem;
+  font-size: 0.82rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* fila de abajo (prendas/mover/debilidad): ícono arriba, etiqueta abajo —
+   en 3 columnas angostas el texto al lado del ícono quedaba cortado */
+.jugador-controles-fila:last-child button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.4rem 0.15rem;
+}
+
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.btn-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.btn-na { font-weight: 900; }
+.btn-na-mas { color: var(--pink); }
+.btn-activo { border-color: var(--yellow); color: var(--yellow); background: rgba(255, 216, 74, 0.12); }
+
+/* menú contextual del jugador: en vez de selects siempre desplegados por
+   jugador, se abre solo el que se toca (prendas o mover de zona) */
+.jugador-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--violet);
+  background: #16121f;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.jugador-menu[data-abierto="true"] {
+  display: flex;
+}
+
+.jugador-menu-titulo {
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.prenda-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 62, 157, 0.5);
+  background: rgba(255, 62, 157, 0.08);
+}
+
+.prenda-chip button {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 0;
+}
+
+/* ---- overlay de puntaje (topbar) ---- */
+
+.overlay-puntaje-inner {
+  width: min(100%, 560px);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* ---- modo compacto (notebooks 1366x768 y similares) ----
+   El riel y el mapa son lo primero que hay que apretar: el resto de las
+   columnas ya scrollea internamente. */
+@media (max-height: 860px) {
+  .dm-topbar-v2 { padding: 0.4rem 0.8rem; }
+  .dm-topbar-v2 .brand b { font-size: 1.1rem; }
+  .mapa-lienzo { aspect-ratio: 2 / 1; }
+  .tablero .dm-card { padding: 0.7rem 0.8rem; }
+  .situacion-titulo { font-size: 1.08rem; }
+  .situacion-texto { font-size: 0.84rem; }
+
+  .jugador { padding: 0.6rem; gap: 0.4rem; }
+  .jugador-head { grid-template-columns: 46px 1fr; gap: 0.5rem; }
+  .jugador-carta { width: 46px; }
+  .jugador-nombre { font-size: 0.92rem; }
+  .badges { min-height: 0; }
+  .jugador-controles button { padding: 0.36rem 0.15rem; font-size: 0.78rem; }
+  /* a este alto ya no entra el texto de cada botón cómodo: queda el ícono
+     + el title nativo del navegador como descripción al pasar el mouse */
+  .btn-label { display: none; }
+}
+
+@media (max-width: 1400px) {
+  .tablero { grid-template-columns: 320px minmax(0, 1fr) 340px; }
 }
 
 #btn-salir-partida {
@@ -2009,6 +2443,30 @@ code {
   padding: 1.25rem;
 }
 
+/* overlay de puntaje del panel del DM: mismo patrón que el del jugador
+   (#puntaje-overlay arriba), disparado desde el botón 🏆 del topbar-v2 */
+#overlay-puntaje {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(0, 0, 0, 0.88);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#overlay-puntaje:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#overlay-puntaje .mi-carta-overlay-inner {
+  background: var(--panel);
+  border: 1px solid var(--yellow);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
 #puntaje-historial-lista {
   display: flex;
   flex-direction: column;
@@ -2227,13 +2685,6 @@ body[data-fase="after"] .dm-fase-pill {
    Jugadores como cartas en el panel del DM
    ========================================================================== */
 
-.player-card {
-  display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
-}
-
 /* Carta chica del panel del DM. Unidades fijas, no cqw: a este tamaño las
    unidades de container degradan a textos de 2px (ver cartaMiniHtml). */
 .carta-mini {
@@ -2277,44 +2728,3 @@ body[data-fase="after"] .dm-fase-pill {
   text-transform: uppercase;
 }
 
-.player-carta {
-  width: 74px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.player-cuerpo {
-  min-width: 0;
-}
-
-.player-estados {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.35rem;
-}
-
-.estado-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  border-radius: 99px;
-  padding: 0.1rem 0.45rem;
-  border: 1px solid;
-}
-
-.estado-caos {
-  color: var(--violet);
-  border-color: var(--violet);
-  background: #1b0d2a;
-}
-
-.estado-debilidad {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: #2a0d14;
-}
-
-.estado-zona {
-  color: var(--cyan);
-  border-color: var(--cyan);
-  background: #0a2a2a;
-}

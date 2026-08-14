@@ -318,6 +318,10 @@ def iniciar_encuentro(npc_id: str | None, jugador_objetivo: str) -> str:
         "acumulado": 0,
         "rondas_jugadas": 0,
         "tiradas": [],
+        # la opción que el jugador ya eligió para esta ronda, esperando que el DM la
+        # resuelva con `resolver_ronda_encare` (ver esa función) — None mientras el
+        # jugador no eligió nada todavía
+        "pendiente": None,
     }
     return npc_id
 
@@ -359,8 +363,12 @@ def npcs_revelados_para_jugador(player_id: str) -> dict:
             # el árbol completo (con las respuestas y ramas futuras) es spoiler: el jugador
             # solo recibe el nodo actual, sin las respuestas ni el destino de cada opción
             npc_sin_arbol = {k: v for k, v in npc_visible.items() if k != "arbol"}
-            visible = {**encuentro, "npc": npc_sin_arbol}
-            if not encuentro["resuelto"]:
+            # "pendiente" en crudo (con stat/respuesta/siguiente) es para uso interno del
+            # DM al resolver la ronda — el jugador solo necesita saber si hay una pendiente
+            hay_pendiente = encuentro["pendiente"] is not None
+            encuentro_sin_pendiente_crudo = {k: v for k, v in encuentro.items() if k != "pendiente"}
+            visible = {**encuentro_sin_pendiente_crudo, "npc": npc_sin_arbol, "pendiente": hay_pendiente}
+            if not encuentro["resuelto"] and not hay_pendiente:
                 nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
                 visible["nodo"] = {
                     "texto": nodo["texto"],
@@ -389,16 +397,18 @@ def _npc_de_encuentro_valido(npc_id: str, player_id: str) -> tuple[dict, dict]:
     return npc, encuentro
 
 
-def intentar_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, stat_otro: str | None = None) -> dict:
-    """Camina un paso del árbol de diálogo de un encuentro de levante/confrontación.
+def elegir_opcion_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, stat_otro: str | None = None) -> dict:
+    """Primer paso de una ronda de encare: el jugador elige qué opción intenta.
 
-    Cada ronda tira dados y suma al acumulado del encuentro. Si la opción elegida (o la
-    rama "Otro") no tiene `siguiente` nodo, ahí se resuelve el encuentro completo: se
-    compara `acumulado` contra `dificultad_por_ronda * rondas_jugadas` y se registra el
-    resultado en el puntaje del jugador. Si tiene `siguiente`, el encuentro sigue abierto
-    en el nodo próximo y todavía no se toca el puntaje.
+    No tira los dados todavía — a la mesa, en este momento el jugador dice en voz alta
+    su frase/movida libremente, y recién después el DM juzga qué tan bien le salió con
+    `resolver_ronda_encare` (que aplica el `modificador_dm` y ahí sí tira). Deja la
+    elección en `encuentro["pendiente"]` hasta que eso pase.
     """
     npc, encuentro = _npc_de_encuentro_valido(npc_id, player_id)
+    if encuentro["pendiente"] is not None:
+        raise ValueError("Ya elegiste una opción para esta ronda, estás esperando al DM")
+
     nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
 
     if stat_otro is not None:
@@ -411,21 +421,57 @@ def intentar_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, 
         opcion = nodo["opciones"][opcion_idx]
         stat, respuesta, siguiente = opcion["stat"], opcion["respuesta"], opcion["siguiente"]
 
+    encuentro["pendiente"] = {"stat": stat, "respuesta": respuesta, "siguiente": siguiente}
+    return {"npc_id": npc_id, "jugador_objetivo": player_id, "stat": stat}
+
+
+def _npc_de_ronda_pendiente(npc_id: str) -> tuple[dict, dict]:
+    info = game_state["npcs_revelados"].get(npc_id)
+    if info is None:
+        raise ValueError(f"npc_id inválido: {npc_id}")
+
+    encuentro = info.get("encuentro")
+    if encuentro is None or encuentro["resuelto"]:
+        raise ValueError("No hay un encuentro sin resolver para este NPC")
+    if encuentro["pendiente"] is None:
+        raise ValueError("Todavía no hay ninguna ronda esperando resolución del DM")
+
+    npc = get_npc(npc_id)
+    return npc, encuentro
+
+
+def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
+    """Segundo paso de una ronda de encare: el DM juzga cómo estuvo lo que dijo el
+    jugador y tira los dados, con `modificador_dm` como bonus/malus a esa tirada (sube
+    o baja la dificultad real de esa ronda sin tocar la escala de `dificultad_chamuyo`/
+    `dificultad` del NPC). Se suma al `acumulado` y, si la opción elegida no tenía
+    `siguiente` nodo, ahí se resuelve el encuentro completo (dificultad total = escala
+    del NPC por rondas jugadas) y se registra el resultado en el puntaje del jugador.
+    """
+    npc, encuentro = _npc_de_ronda_pendiente(npc_id)
+    pendiente = encuentro["pendiente"]
+    stat, respuesta, siguiente = pendiente["stat"], pendiente["respuesta"], pendiente["siguiente"]
+    player_id = encuentro["jugador_objetivo"]
+
     jugador = game_state["jugadores"][player_id]
     personaje = get_personaje(jugador["personaje_id"])
     resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
+    total_ajustado = resultado["total"] + modificador_dm
 
-    encuentro["acumulado"] += resultado["total"]
+    encuentro["pendiente"] = None
+    encuentro["acumulado"] += total_ajustado
     encuentro["rondas_jugadas"] += 1
-    encuentro["tiradas"].append(resultado)
+    tirada = {**resultado, "modificador_dm": modificador_dm, "total_ajustado": total_ajustado}
+    encuentro["tiradas"].append(tirada)
 
     if siguiente is not None:
         encuentro["nodo_actual"] = siguiente
         nodo_siguiente = npc["arbol"]["nodos"][siguiente]
         return {
-            **resultado,
+            **tirada,
             "resuelto": False,
             "npc_id": npc_id,
+            "jugador_objetivo": player_id,
             "stat": stat,
             "respuesta": respuesta,
             "siguiente_nodo": {
@@ -444,9 +490,10 @@ def intentar_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, 
     _registrar_resultado(player_id, npc["tipo"], npc["nombre"], exito, puntos)
 
     respuesta_final = {
-        **resultado,
+        **tirada,
         "resuelto": True,
         "npc_id": npc_id,
+        "jugador_objetivo": player_id,
         "stat": stat,
         "exito": exito,
         "acumulado": encuentro["acumulado"],
