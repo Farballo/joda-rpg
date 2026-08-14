@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($sp = \"C:\\\\Users\\\\Usuario\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Usuario-OneDrive-Documents-D-D-juego-previa\\\\57fa9517-c8a9-4316-a9bc-58a3bd442361\\\\scratchpad\"; .\\\\venv\\\\Scripts\\\\python.exe \"$sp\\\\shot_mockup.py\" \"$sp\\\\mockup\" 2>&1 | Select-Object -Last 10)",
+      "Read(//c/Users/Usuario/.claude/plans/**)",
+      "Bash(python -m pytest -q)"
+    ]
+  }
+}

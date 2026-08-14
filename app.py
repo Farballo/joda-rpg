@@ -6,18 +6,24 @@ from pydantic import BaseModel
 import ai_narrator
 import dice
 from game_state import (
+    activar_debilidad,
     ajustar_na,
     avanzar_fase,
-    cambiar_mapa,
+    cartas_disponibles,
+    configurar_eventos,
+    configurar_mapas,
     crear_jugador,
     crear_partida,
+    desactivar_debilidad,
+    expulsar_jugador,
     game_state,
     get_npc,
     get_personaje,
-    intentar_confrontacion,
-    intentar_levante,
+    iniciar_encuentro,
+    iniciar_partida,
+    intentar_encare,
+    intentar_situacion,
     mover_jugador,
-    npc_con_misterio,
     npcs_revelados_para_jugador,
     ocultar_npc,
     registrar_tirada,
@@ -25,8 +31,8 @@ from game_state import (
     resolver_prenda,
     retroceder_fase,
     revelar_npc,
-    revelar_npc_encuentro,
     siguiente_situacion,
+    stat_efectivo,
 )
 
 app = FastAPI()
@@ -47,6 +53,7 @@ def estado_completo_msg():
     return {
         "type": "estado_completo",
         "partida_creada": game_state["partida_creada"],
+        "partida_iniciada": game_state["partida_iniciada"],
         "jugadores": game_state["jugadores"],
         "fase": game_state["fase"],
         "npcs_revelados": game_state["npcs_revelados"],
@@ -54,6 +61,8 @@ def estado_completo_msg():
         "eventos_usados": game_state["eventos_usados"],
         "log_eventos": game_state["log_eventos"],
         "mapa_actual": game_state["mapa_actual"],
+        "mapas_habilitados": game_state["mapas_habilitados"],
+        "eventos_habilitados": game_state["eventos_habilitados"],
     }
 
 
@@ -72,7 +81,10 @@ def estado_jugador_msg(player_id: str):
         "type": "estado",
         "na": jugador["na"],
         "modo_caos_activo": jugador["modo_caos_activo"],
+        "debilidad_activa": jugador["debilidad_activa"],
         "prendas": jugador["prendas_activas"],
+        "puntaje": jugador["puntaje"],
+        "historial": jugador["historial"],
         "fase": game_state["fase"],
         "zona_actual": jugador["zona_actual"],
         "npcs_revelados": npcs_revelados_para_jugador(player_id),
@@ -112,18 +124,22 @@ async def broadcast_npc_revelado(npc: dict, zona: str):
             player_connections.pop(player_id, None)
 
 
-async def enviar_npc_revelado_dirigido(player_id: str, npc: dict):
-    ws = player_connections.get(player_id)
-    if ws is None:
-        return
-    try:
-        await ws.send_json({"type": "npc_revelado", "npc": npc, "zona": None})
-    except Exception:
-        player_connections.pop(player_id, None)
-
-
 async def broadcast_narracion(texto: str):
     mensaje = {"type": "narracion", "texto": texto}
+    for player_id in list(player_connections.keys()):
+        ws = player_connections.get(player_id)
+        if ws is None:
+            continue
+        try:
+            await ws.send_json(mensaje)
+        except Exception:
+            player_connections.pop(player_id, None)
+
+
+async def broadcast_ocultar_carta_npc(npc_id: str):
+    """Una vez que un NPC entra en un encuentro, la carta de reveal ('Hablar'/'Ignorar')
+    deja de tener sentido en la pantalla de los demás jugadores: se cierra para todos."""
+    mensaje = {"type": "ocultar_carta_npc", "npc_id": npc_id}
     for player_id in list(player_connections.keys()):
         ws = player_connections.get(player_id)
         if ws is None:
@@ -164,6 +180,12 @@ async def get_jugador():
     return FileResponse("static/jugador.html")
 
 
+@app.get("/api/cartas")
+async def get_cartas():
+    """personaje_id -> URL de su carta ilustrada. Los que faltan no vienen en el dict."""
+    return cartas_disponibles()
+
+
 @app.post("/join")
 async def join(req: JoinRequest):
     try:
@@ -190,6 +212,52 @@ async def ws_dm(websocket: WebSocket):
                 crear_partida()
                 await broadcast_estado_dm()
 
+            elif msg.get("type") == "iniciar_partida":
+                iniciar_partida()
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "configurar_mapas":
+                try:
+                    configurar_mapas(msg.get("mapas", {}))
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
+                await broadcast_estado_todos_jugadores()
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "crear_jugador_dummy":
+                nombre = (msg.get("nombre") or "").strip()
+                if not nombre:
+                    await websocket.send_json({"type": "error", "detail": "Poné un nombre para el jugador"})
+                    continue
+
+                try:
+                    crear_jugador(nombre, msg.get("personaje_id"))
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
+                await broadcast_estado_todos_jugadores()
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "expulsar_jugador":
+                player_id = msg.get("player_id")
+                if player_id not in game_state["jugadores"]:
+                    await websocket.send_json({"type": "error", "detail": f"player_id inválido: {player_id}"})
+                    continue
+
+                expulsar_jugador(player_id)
+                ws_jugador = player_connections.pop(player_id, None)
+                if ws_jugador is not None:
+                    try:
+                        await ws_jugador.close(code=4404)
+                    except Exception:
+                        pass
+
+                await broadcast_estado_todos_jugadores()
+                await broadcast_estado_dm()
+
             elif msg.get("type") == "avanzar_fase":
                 avanzar_fase()
                 await broadcast_estado_todos_jugadores()
@@ -200,14 +268,13 @@ async def ws_dm(websocket: WebSocket):
                 await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
 
-            elif msg.get("type") == "cambiar_mapa":
+            elif msg.get("type") == "configurar_eventos":
                 try:
-                    cambiar_mapa(msg.get("mapa_id"))
+                    configurar_eventos(msg.get("eventos", {}))
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
 
             elif msg.get("type") == "ajustar_na":
@@ -217,6 +284,26 @@ async def ws_dm(websocket: WebSocket):
                     continue
 
                 ajustar_na(player_id, msg.get("delta", 0))
+                await enviar_estado_jugador(player_id)
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "activar_debilidad":
+                player_id = msg.get("player_id")
+                if player_id not in game_state["jugadores"]:
+                    await websocket.send_json({"type": "error", "detail": f"player_id inválido: {player_id}"})
+                    continue
+
+                activar_debilidad(player_id)
+                await enviar_estado_jugador(player_id)
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "desactivar_debilidad":
+                player_id = msg.get("player_id")
+                if player_id not in game_state["jugadores"]:
+                    await websocket.send_json({"type": "error", "detail": f"player_id inválido: {player_id}"})
+                    continue
+
+                desactivar_debilidad(player_id)
                 await enviar_estado_jugador(player_id)
                 await broadcast_estado_dm()
 
@@ -274,23 +361,20 @@ async def ws_dm(websocket: WebSocket):
                 await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
 
-            elif msg.get("type") == "revelar_npc_encuentro":
+            elif msg.get("type") == "iniciar_encuentro":
                 jugador_objetivo = msg.get("jugador_objetivo")
-                if jugador_objetivo not in game_state["jugadores"]:
-                    await websocket.send_json({"type": "error", "detail": f"player_id inválido: {jugador_objetivo}"})
-                    continue
 
                 try:
-                    npc_id = revelar_npc_encuentro(msg.get("npc_id"), msg.get("modo", "elegir"), jugador_objetivo)
+                    npc_id = iniciar_encuentro(msg.get("npc_id") or None, jugador_objetivo)
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                jugador = game_state["jugadores"][jugador_objetivo]
-                npc = npc_con_misterio(get_npc(npc_id), jugador)
-                await enviar_npc_revelado_dirigido(jugador_objetivo, npc)
+                # el encuentro viaja dentro del `estado` del jugador objetivo (ya filtrado
+                # por el misterio de lindura si corresponde), no como mensaje aparte
                 await enviar_estado_jugador(jugador_objetivo)
                 await broadcast_estado_dm()
+                await broadcast_ocultar_carta_npc(npc_id)
 
             elif msg.get("type") == "ocultar_npc":
                 ocultar_npc(msg.get("npc_id"))
@@ -343,37 +427,56 @@ async def ws_player(websocket: WebSocket, player_id: str):
                     continue
 
                 contexto = msg.get("contexto")
-                resultado = dice.tirar(jugador["na"], stat, personaje["stats"][stat])
+                resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
                 registrar_tirada(player_id, stat, resultado, contexto)
 
                 await websocket.send_json({"type": "resultado_tirada", "stat": stat, "contexto": contexto, **resultado})
                 await broadcast_estado_dm()
 
-            elif msg.get("type") == "resolver_prenda":
-                resolver_prenda(player_id, msg.get("prenda_id"))
-                await websocket.send_json(estado_jugador_msg(player_id))
-                await broadcast_estado_dm()
-
-            elif msg.get("type") == "intentar_levante":
+            elif msg.get("type") == "hablar_con_npc":
+                npc_id = msg.get("npc_id")
                 try:
-                    resultado = intentar_levante(player_id, msg.get("npc_id"))
+                    iniciar_encuentro(npc_id, player_id)
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                await websocket.send_json({"type": "resultado_levante", **resultado})
                 await enviar_estado_jugador(player_id)
                 await broadcast_estado_dm()
+                await broadcast_ocultar_carta_npc(npc_id)
 
-            elif msg.get("type") == "intentar_confrontacion":
+            elif msg.get("type") == "intentar_encare":
                 try:
-                    resultado = intentar_confrontacion(player_id, msg.get("npc_id"), msg.get("stat"))
+                    resultado = intentar_encare(
+                        player_id, msg.get("npc_id"), msg.get("opcion_idx"), msg.get("stat_otro")
+                    )
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
 
-                await websocket.send_json({"type": "resultado_confrontacion", **resultado})
+                if resultado["resuelto"]:
+                    npc = get_npc(msg.get("npc_id"))
+                    registrar_tirada(player_id, resultado["stat"], resultado, npc["nombre"])
+
+                await websocket.send_json({"type": "resultado_encare", **resultado})
                 await enviar_estado_jugador(player_id)
+                await broadcast_estado_dm()
+
+            elif msg.get("type") == "intentar_situacion":
+                stat = msg.get("stat")
+                opcion = msg.get("opcion")
+                try:
+                    resultado = intentar_situacion(player_id, stat, opcion)
+                except ValueError as e:
+                    await websocket.send_json({"type": "error", "detail": str(e)})
+                    continue
+
+                situacion_titulo = game_state["situacion_actual"]["titulo"]
+                contexto = f"{situacion_titulo} — {opcion}" if opcion else situacion_titulo
+                registrar_tirada(player_id, resultado["stat"], resultado, contexto)
+
+                await websocket.send_json({"type": "resultado_situacion", **resultado})
+                await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
     except WebSocketDisconnect:
         player_connections.pop(player_id, None)

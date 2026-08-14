@@ -2,33 +2,68 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Joda RPG — Jugador</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="pagina-jugador">
-  <h1>Joda RPG</h1>
+<body class="pagina-jugador" data-fase="previa" data-na-tramo="sobrio">
 
-  <form id="form-join">
-    <label for="input-nombre">Tu nombre</label>
-    <input type="text" id="input-nombre" required>
+  <div id="pantalla-join" class="pantalla-join">
+    <header class="join-hero">
+      <div class="join-eyebrow">NOCHE DE BOLICHE</div>
+      <h1>Joda RPG</h1>
+      <p class="join-sub">Deslizá y elegí tu personaje</p>
+    </header>
 
-    <h2>Elegí tu personaje</h2>
-    <div id="personajes">Cargando personajes...</div>
+    <div class="carrusel-wrap">
+      <button type="button" class="carrusel-flecha carrusel-flecha-prev" id="btn-carrusel-prev" aria-label="Personaje anterior">‹</button>
+      <div class="carrusel" id="carrusel" tabindex="0" aria-label="Personajes disponibles"></div>
+      <button type="button" class="carrusel-flecha carrusel-flecha-next" id="btn-carrusel-next" aria-label="Personaje siguiente">›</button>
+    </div>
 
-    <p id="error-join" class="error"></p>
-    <button type="submit">Unirme a la partida</button>
-  </form>
+    <div class="carrusel-puntos" id="carrusel-puntos"></div>
+
+    <form id="form-join" class="join-form">
+      <input type="text" id="input-nombre" placeholder="¿Cómo te llamás?" autocomplete="given-name" required>
+      <p id="error-join" class="error"></p>
+      <button type="submit" id="btn-join">Soy <strong id="btn-join-nombre">…</strong></button>
+    </form>
+  </div>
+
+  <div id="reveal-overlay" class="oculto">
+    <div class="reveal-inner">
+      <div class="reveal-eyebrow">ESTA NOCHE SOS</div>
+      <div class="reveal-carta-slot" id="reveal-carta-slot"></div>
+      <button type="button" id="btn-reveal-listo">Entrar a la joda</button>
+    </div>
+  </div>
 
   <div id="pantalla-espera" class="oculto">
-    <p>Estás en la partida, <strong id="nombre-confirmado"></strong>.</p>
-    <p>Fase: <strong id="fase-actual">-</strong></p>
+    <div class="jugador-topbar">
+      <button type="button" class="mi-carta-chip" id="btn-mi-carta">
+        <span class="mi-carta-thumb" id="mi-carta-thumb"></span>
+        <span class="mi-carta-chip-texto">
+          <strong id="nombre-confirmado"></strong>
+          <span id="mi-personaje-nombre"></span>
+        </span>
+      </button>
+      <button type="button" class="chip-puntaje" id="chip-puntaje">
+        🏆 <span id="chip-puntaje-valor">0</span>
+      </button>
+      <div class="fase-pill" id="fase-actual">-</div>
+    </div>
 
-    <h2>Nivel de Alcohol</h2>
-    <div class="na-meter"><div class="na-fill" id="na-fill"></div></div>
-    <p id="na-label"></p>
+    <section class="panel-na">
+      <div class="na-cabecera">
+        <span class="na-titulo">Nivel de Alcohol</span>
+        <span class="na-estado" id="na-label"></span>
+      </div>
+      <div class="na-meter"><div class="na-fill" id="na-fill"></div></div>
+    </section>
 
     <div id="modo-caos" class="oculto"></div>
+
+    <div id="debilidad-activa" class="oculto"></div>
 
     <div id="situacion-actual" class="oculto">
       <h2>Situación actual</h2>
@@ -65,6 +100,21 @@
     <button id="btn-salir-partida" type="button">Salir de la partida</button>
   </div>
 
+  <div id="puntaje-overlay" class="oculto">
+    <div class="mi-carta-overlay-inner">
+      <h2>🏆 Tu puntaje: <span id="puntaje-overlay-valor"></span></h2>
+      <ul id="puntaje-historial-lista"></ul>
+      <button type="button" id="btn-cerrar-puntaje">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="mi-carta-overlay" class="oculto">
+    <div class="mi-carta-overlay-inner">
+      <div class="mi-carta-slot" id="mi-carta-slot"></div>
+      <button type="button" id="btn-cerrar-mi-carta">Cerrar</button>
+    </div>
+  </div>
+
   <div id="npc-card-overlay" class="oculto">
     <div class="npc-card-popup">
       <div class="npc-card-avatar" id="npc-card-avatar"></div>
@@ -72,11 +122,34 @@
       <h2 id="npc-card-nombre"></h2>
       <p class="npc-card-apodo" id="npc-card-apodo"></p>
       <p id="npc-card-frase"></p>
-      <div id="npc-card-lindura"></div>
       <div class="npc-card-actions" id="npc-card-actions"></div>
     </div>
   </div>
 
+  <div id="encuentro-overlay" class="oculto">
+    <div class="npc-card-popup encuentro-popup">
+      <div class="npc-card-avatar" id="encuentro-avatar"></div>
+      <div class="eyebrow" id="encuentro-eyebrow">TE TOCA A VOS</div>
+      <h2 id="encuentro-nombre"></h2>
+      <p class="npc-card-apodo" id="encuentro-apodo"></p>
+      <p id="encuentro-frase"></p>
+      <div id="encuentro-lindura"></div>
+      <div class="npc-card-actions" id="encuentro-actions"></div>
+    </div>
+  </div>
+
+  <div id="tirada-overlay" class="oculto">
+    <div class="tirada-popup">
+      <div class="eyebrow">TIRADA</div>
+      <div id="tirada-animacion">
+        <div class="tirada-dados-rolando" id="tirada-dados-animados">🎲 …   🎲 …</div>
+        <p>Tirando...</p>
+      </div>
+      <div id="tirada-resultado" class="oculto"></div>
+    </div>
+  </div>
+
+  <script src="/static/carta.js"></script>
   <script src="/static/jugador.js"></script>
 </body>
 </html>

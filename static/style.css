@@ -117,32 +117,6 @@ form#form-join > button[type="submit"] {
   display: none !important;
 }
 
-.personaje-card {
-  display: block;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 0.85rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-}
-
-.personaje-card:has(input:checked) {
-  border-color: var(--pink);
-  box-shadow: 0 0 0 1px var(--pink);
-}
-
-.personaje-card strong {
-  display: block;
-  font-size: 1.05rem;
-  margin: 0.2rem 0;
-}
-
-.personaje-card p {
-  margin: 0;
-  color: var(--muted);
-}
-
 .error {
   color: var(--danger);
   font-weight: 600;
@@ -212,6 +186,21 @@ form#form-join > button[type="submit"] {
   padding: 0.5rem;
 }
 
+.debilidad-controls {
+  margin-top: 0.4rem;
+}
+
+.debilidad-controls button {
+  width: 100%;
+  padding: 0.5rem;
+}
+
+.btn-debilidad-activa {
+  background: linear-gradient(135deg, #4a1420, #1e0a0f);
+  border: 1px solid var(--danger);
+  color: #fff;
+}
+
 #lista-jugadores {
   list-style: none;
   padding: 0;
@@ -239,6 +228,7 @@ form#form-join > button[type="submit"] {
   border-radius: 99px;
   padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
+  cursor: help;
 }
 
 .prenda-tag button {
@@ -252,15 +242,18 @@ form#form-join > button[type="submit"] {
 
 .prenda-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
 
 .prenda-controls select {
-  flex: 1;
+  flex: 1 1 100%;
+  min-width: 130px;
 }
 
 .prenda-controls button {
+  flex: 1 1 100%;
   padding: 0.5rem;
 }
 
@@ -357,14 +350,43 @@ form#form-join > button[type="submit"] {
   color: #ddd;
 }
 
+#debilidad-activa {
+  margin: 0.75rem 0;
+  padding: 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4a1420, #1e0a0f);
+  border: 1px solid #ff466f;
+  color: #fff;
+}
+
+#debilidad-activa .eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ff466f;
+  font-weight: bold;
+}
+
+#debilidad-activa h2 {
+  margin: 0.2rem 0 0.5rem;
+  color: #ff466f;
+}
+
+#debilidad-activa .consecuencia {
+  margin-top: 0.5rem;
+  color: #ddd;
+}
+
 .zona-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
 
 .zona-controls select {
   flex: 1;
+  min-width: 110px;
 }
 
 .zona-controls button {
@@ -449,12 +471,14 @@ form#form-join > button[type="submit"] {
 
 .revelar-npc-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
 .revelar-npc-form select {
   flex: 1;
+  min-width: 110px;
 }
 
 .revelar-npc-form button {
@@ -473,6 +497,33 @@ form#form-join > button[type="submit"] {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+}
+
+/* El encuentro va por encima de la carta de reveal: si el DM revela otro NPC
+   mientras hay un encuentro en curso, el encuentro sigue siendo lo importante. */
+#encuentro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.82);
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+#encuentro-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* con #id para ganarle a las reglas de .npc-card-popup que vienen más abajo */
+#encuentro-overlay .encuentro-popup {
+  border-color: var(--violet);
+  box-shadow: 0 0 48px rgba(157, 66, 255, 0.45);
+}
+
+#encuentro-overlay .eyebrow {
+  color: var(--violet);
 }
 
 .npc-card-popup {
@@ -558,6 +609,70 @@ form#form-join > button[type="submit"] {
   border: 1px solid #363647;
 }
 
+#tirada-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1rem;
+}
+
+#tirada-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tirada-popup {
+  width: min(100%, 360px);
+  background: linear-gradient(135deg, var(--panel2), var(--bg));
+  border: 1px solid var(--violet);
+  box-shadow: 0 0 40px rgba(157, 66, 255, 0.4);
+  border-radius: 20px;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text);
+  animation: npc-card-in 0.35s ease;
+}
+
+.tirada-popup .eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: bold;
+}
+
+.tirada-dados-rolando {
+  font-size: 2.2rem;
+  margin: 1rem 0 0.5rem;
+  animation: tirada-shake 0.15s infinite;
+}
+
+@keyframes tirada-shake {
+  0% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+  100% { transform: rotate(-4deg); }
+}
+
+.tirada-dados-final {
+  font-size: 2.2rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.tirada-exito {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+#tirada-resultado button {
+  width: 100%;
+  margin-top: 0.75rem;
+  background: var(--violet);
+  color: #fff;
+  font-weight: bold;
+}
+
 .lindura-valor {
   color: var(--yellow);
   font-weight: 700;
@@ -581,6 +696,48 @@ form#form-join > button[type="submit"] {
   margin-top: 0.5rem;
 }
 
+#btn-situacion-otro,
+#btn-encuentro-otro {
+  background: transparent;
+  border: 1px solid var(--violet);
+  color: var(--violet);
+}
+
+#situacion-otro-stats,
+#encuentro-otro-stats {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--violet);
+  border-radius: 12px;
+}
+
+.situacion-otro-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.situacion-resuelta {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  margin: 0;
+}
+
+.situacion-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 0.4rem;
+}
+
+.situacion-pendiente {
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}
+
 .situacion-opciones-dm {
   display: flex;
   flex-wrap: wrap;
@@ -595,6 +752,11 @@ form#form-join > button[type="submit"] {
   border-radius: 99px;
   padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
+}
+
+.opcion-pill-otro {
+  border-color: var(--violet);
+  color: var(--violet);
 }
 
 .evento-usado {
@@ -621,13 +783,136 @@ form#form-join > button[type="submit"] {
   border: none;
 }
 
-.encuentro-card {
+.dm-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+#dm-error {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  margin: 0 1rem 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: #33101c;
+  border: 1px solid var(--danger);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.encuentro-en-curso-banner {
+  background: #241033;
+  border: 1px solid var(--violet);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.encuentro-en-curso-banner span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.npc-revelado-card {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.npc-revelado-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.npc-revelado-head button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 0.2rem;
+}
+
+.npc-revelado-head button:hover {
+  color: var(--danger);
+}
+
+.npc-revelado-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.4rem 0;
+}
+
+.npc-revelado-tag {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.4rem;
-  font-size: 0.9rem;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.npc-revelado-nota {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0.3rem 0 0;
+}
+
+.npc-revelado-pendiente {
+  color: var(--violet);
+  font-weight: 700;
+  margin: 0.3rem 0 0;
+}
+
+.puntaje-jugador-card {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.puntaje-jugador-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.puntaje-jugador-historial {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.npc-revelado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.npc-revelado-acciones select {
+  flex: 1;
+  min-width: 100px;
+}
+
+.token-npc-encuentro {
+  border-color: var(--violet);
+  color: var(--violet);
+  background: #241033;
 }
 
 #btn-narrar-ia {
@@ -725,6 +1010,228 @@ form#form-join > button[type="submit"] {
   font-weight: 800;
 }
 
+/* ---- Pantalla de configuración / lobby previo a la partida ---- */
+
+.pantalla-configuracion {
+  max-width: 900px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+code {
+  background: var(--panel2);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.9em;
+}
+
+.config-mapas-fase {
+  margin-bottom: 1.25rem;
+}
+
+.config-mapas-fase:last-child {
+  margin-bottom: 0;
+}
+
+.config-mapas-fase h3 {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  margin: 0 0 0.6rem;
+}
+
+.config-mapas-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+
+.mapa-config-card {
+  display: block;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.6rem;
+  cursor: pointer;
+}
+
+.mapa-config-card:has(input:checked) {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+
+.mapa-config-card-nombre {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin: 0.4rem 0;
+}
+
+.mapa-mini-preview {
+  position: relative;
+  height: 90px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.mapa-mini-zona {
+  position: absolute;
+  border: 1px solid var(--line);
+  background: rgba(16, 16, 25, 0.9);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.config-eventos-fase {
+  margin-bottom: 1.5rem;
+}
+
+.config-eventos-fase:last-child {
+  margin-bottom: 0;
+}
+
+.config-eventos-fase-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.config-eventos-fase-head h3 {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.btn-seleccionar-todo-eventos {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.config-eventos-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.config-evento-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.config-evento-row-excluido {
+  opacity: 0.5;
+}
+
+.config-evento-orden {
+  color: var(--cyan);
+  font-weight: 800;
+  font-size: 0.85rem;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.config-evento-titulo {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.config-evento-mover {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.config-evento-mover button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+#config-lista-jugadores {
+  list-style: none;
+  padding: 0;
+}
+
+.config-jugador-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.config-jugador-thumb {
+  display: block;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--cyan);
+  flex-shrink: 0;
+}
+
+.config-jugador-nombre {
+  flex: 1;
+  min-width: 0;
+}
+
+.config-jugador-card button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.agregar-dummy-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.agregar-dummy-form input {
+  flex: 2;
+  min-width: 160px;
+}
+
+.agregar-dummy-form select {
+  flex: 1;
+  min-width: 140px;
+}
+
+.agregar-dummy-form button {
+  flex: 0 0 auto;
+}
+
+#btn-empezar-partida {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  color: #fff;
+  border: none;
+  font-weight: 800;
+}
+
 .dm-logo {
   font-size: 1.6rem;
   font-weight: 900;
@@ -750,17 +1257,71 @@ form#form-join > button[type="submit"] {
 
 .dm-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 330px minmax(0, 1fr) 340px;
   gap: 1.25rem;
   align-items: start;
 }
 
-.dm-main,
-.dm-sidebar {
+.dm-col-central {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
+}
+
+.dm-col-jugadores {
+  max-height: calc(100vh - 6.5rem);
+  overflow-y: auto;
+}
+
+.dm-col-tabs {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 6.5rem);
+  min-width: 0;
+}
+
+.dm-tabs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dm-tab-btn {
+  flex: 1 1 auto;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.8rem;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dm-tab-btn-activo {
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  color: #fff;
+  border-color: transparent;
+}
+
+.dm-tab-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .dm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dm-col-jugadores,
+  .dm-col-tabs {
+    max-height: none;
+    position: static;
+  }
 }
 
 .dm-card {
@@ -789,12 +1350,6 @@ form#form-join > button[type="submit"] {
 .dm-card-head #btn-avanzar-fase {
   margin-bottom: 0;
   white-space: nowrap;
-}
-
-@media (max-width: 1000px) {
-  .dm-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ---- Mapa visual (plano espacial, solo /dm) ---- */
@@ -840,21 +1395,6 @@ form#form-join > button[type="submit"] {
   margin: 0;
 }
 
-.cambiar-mapa-form {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.cambiar-mapa-form select {
-  background: var(--panel2);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.4rem 0.6rem;
-}
-
 .dm-card-head-botones {
   display: flex;
   gap: 0.5rem;
@@ -886,4 +1426,895 @@ form#form-join > button[type="submit"] {
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+/* ==========================================================================
+   Carta de personaje — componente compartido por /jugador y /dm
+
+   Los personajes con ilustración en data/personajes_cartas/ muestran la
+   imagen; a los que faltan les dibujamos la carta con los mismos datos de
+   personajes.json (ver carta.js). Las dos variantes comparten proporción y
+   marco para que convivan en el carrusel sin que se note el parche.
+
+   El interior usa unidades de container query (cqw) para que la carta
+   dibujada se lea igual a 74px de ancho en el panel del DM que a 290px en
+   el carrusel del celu, sin escribir un breakpoint por cada tamaño.
+   ========================================================================== */
+
+.carta {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1054 / 1492;
+  border-radius: 4cqw;
+  overflow: hidden;
+  background: #2c1a0e;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  flex-shrink: 0;
+}
+
+.carta-ilustrada {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- Carta dibujada (personajes sin ilustración todavía) ---- */
+
+.carta-dibujada {
+  background: linear-gradient(160deg, #f5e6c8 0%, #e8d4a8 50%, #d4b88a 100%);
+  border: 1.2cqw solid #2c1a0e;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #3a2a1a;
+}
+
+/* Absoluto a propósito: si el lienzo participara del flujo, el texto empujaría
+   la caja hacia abajo y le rompería el aspect-ratio a la carta cuando se
+   muestra chica (la lista de jugadores del DM la pinta a 74px). */
+.carta-lienzo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2cqw;
+  gap: 1.5cqw;
+}
+
+/* Ojo: esta carta está pensada para ~260px de ancho para arriba (carrusel,
+   reveal, overlay). Abajo de ~150px las unidades cqw degradan a textos de 2px
+   y queda ilegible — para tamaños chicos existe .carta-mini. */
+
+.carta-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2cqw;
+  background: linear-gradient(90deg, #3a2a1a, #5c4030);
+  border: 0.5cqw solid #2c1a0e;
+  border-radius: 2cqw;
+  padding: 1.5cqw;
+}
+
+.carta-titulo {
+  color: #f8e8c8;
+  font-size: 5cqw;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 2cqw rgba(255, 200, 60, 0.6);
+}
+
+.carta-copa {
+  font-size: 4.5cqw;
+}
+
+.carta-estrellas {
+  text-align: center;
+  color: #e8a020;
+  font-size: 4cqw;
+  letter-spacing: 0.8cqw;
+  line-height: 1;
+  text-shadow: 0 0 1.5cqw rgba(255, 170, 0, 0.7);
+}
+
+.carta-retrato {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.6cqw solid #2c1a0e;
+  border-radius: 2cqw;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(45deg, rgba(44, 26, 14, 0.06) 0 3cqw, transparent 3cqw 6cqw),
+    linear-gradient(160deg, #7d6a52, #4a3c2c);
+}
+
+.carta-monograma {
+  font-size: 40cqw;
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(245, 230, 200, 0.22);
+  text-shadow: 0 0.8cqw 1.5cqw rgba(0, 0, 0, 0.5);
+}
+
+.carta-nombre-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4cqw;
+  background: linear-gradient(90deg, transparent, #3a2a1a 15%, #3a2a1a 85%, transparent);
+  color: #f8e8c8;
+  text-align: center;
+  font-size: 6.5cqw;
+  font-weight: 900;
+  padding: 1.2cqw 2cqw;
+  text-shadow: 0.4cqw 0.4cqw 0.8cqw #000;
+}
+
+.carta-frase {
+  text-align: center;
+  font-style: italic;
+  font-size: 3.6cqw;
+  line-height: 1.3;
+  color: #3a2a1a;
+  background: rgba(185, 165, 201, 0.35);
+  border: 0.4cqw solid #c9a86c;
+  border-radius: 1.5cqw;
+  padding: 1.5cqw;
+}
+
+.carta-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1cqw;
+  background: rgba(255, 255, 255, 0.28);
+  border: 0.4cqw solid #c9a86c;
+  border-radius: 1.5cqw;
+  padding: 1.5cqw 1cqw;
+}
+
+.carta-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3cqw;
+}
+
+.carta-stat-icono {
+  font-size: 4.5cqw;
+  line-height: 1;
+}
+
+.carta-stat-label {
+  font-size: 2.3cqw;
+  font-weight: 700;
+  color: #5c4030;
+}
+
+.carta-stat-valor {
+  font-size: 5cqw;
+  font-weight: 900;
+  color: #2c1a0e;
+  line-height: 1;
+}
+
+.carta-paneles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5cqw;
+}
+
+.carta-panel {
+  background: rgba(185, 165, 201, 0.4);
+  border: 0.4cqw solid #c9a86c;
+  border-radius: 1.5cqw;
+  padding: 1.5cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6cqw;
+}
+
+.carta-panel-tipo {
+  text-align: center;
+  font-size: 2.4cqw;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #5c4030;
+}
+
+.carta-panel-nombre {
+  text-align: center;
+  font-size: 3.4cqw;
+  font-weight: 900;
+  font-style: italic;
+  color: #2c1a0e;
+  line-height: 1.1;
+}
+
+.carta-panel-texto {
+  margin: 0;
+  font-size: 2.6cqw;
+  line-height: 1.25;
+  color: #4a3828;
+}
+
+.carta-panel-mod {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1cqw;
+  border-top: 0.3cqw solid rgba(44, 26, 14, 0.3);
+  font-size: 2.4cqw;
+  font-weight: 700;
+  color: #5c4030;
+}
+
+.carta-mod-valor {
+  font-size: 4cqw;
+  font-weight: 900;
+  color: #c0392b;
+}
+
+.carta-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #3a2a1a;
+  border-radius: 1.5cqw;
+  padding: 1cqw 1.5cqw;
+  font-size: 2.2cqw;
+  color: #c9a86c;
+}
+
+/* ---- Miniatura (chip del jugador, lista del DM) ---- */
+
+.carta-thumb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* la cara cae en el tercio superior de la carta */
+  object-position: center 22%;
+}
+
+.carta-thumb-monograma {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #7d6a52, #3a2a1a);
+  color: #f5e6c8;
+  font-family: Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+/* ==========================================================================
+   Selección de personaje: carrusel (/jugador)
+   ========================================================================== */
+
+.pantalla-join {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.join-hero {
+  text-align: center;
+}
+
+.join-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+.join-hero h1 {
+  font-size: 2.4rem;
+  margin: 0.1rem 0;
+  background: linear-gradient(90deg, var(--cyan), var(--pink), var(--violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.join-sub {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.carrusel-wrap {
+  position: relative;
+  /* se sale del padding del body para que asomen las cartas de los costados */
+  margin: 0 -1.5rem;
+}
+
+.carrusel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* el padding lateral permite centrar la primera y la última con snap */
+  padding: 1.5rem max(1rem, calc(50% - min(68vw, 290px) / 2));
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carrusel::-webkit-scrollbar {
+  display: none;
+}
+
+.carrusel:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -4px;
+}
+
+.carta-carrusel {
+  width: min(68vw, 290px);
+  scroll-snap-align: center;
+  cursor: pointer;
+  opacity: 0.45;
+  transform: scale(0.85);
+  transition: transform 0.28s ease, opacity 0.28s ease, box-shadow 0.28s ease;
+}
+
+.carta-carrusel.carta-activa {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 3px var(--pink), 0 14px 40px rgba(255, 62, 157, 0.4);
+}
+
+.carrusel-flecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  background: rgba(16, 16, 25, 0.85);
+  border: 1px solid var(--line);
+  color: var(--text);
+  backdrop-filter: blur(4px);
+}
+
+.carrusel-flecha:disabled {
+  opacity: 0.25;
+}
+
+.carrusel-flecha-prev {
+  left: 0.35rem;
+}
+
+.carrusel-flecha-next {
+  right: 0.35rem;
+}
+
+.carrusel-puntos {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.carrusel-punto {
+  width: 0.6rem;
+  height: 0.6rem;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--line);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.carrusel-punto-activo {
+  background: var(--pink);
+  transform: scale(1.35);
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#btn-join {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  color: #fff;
+  border: none;
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   Reveal al unirse
+   ========================================================================== */
+
+#reveal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: radial-gradient(circle at 50% 40%, rgba(157, 66, 255, 0.42), rgba(0, 0, 0, 0.97) 60%), #07070b;
+  padding: 1.5rem;
+}
+
+#reveal-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reveal-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: min(100%, 300px);
+}
+
+.reveal-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--yellow);
+  font-weight: 700;
+  animation: reveal-texto 0.5s ease both;
+}
+
+.reveal-carta-slot {
+  width: 100%;
+  perspective: 1200px;
+}
+
+.carta-reveal {
+  animation: reveal-carta 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes reveal-carta {
+  from {
+    opacity: 0;
+    transform: rotateY(90deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0) scale(1);
+  }
+}
+
+@keyframes reveal-texto {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#btn-reveal-listo {
+  width: 100%;
+  padding: 0.95rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  color: #fff;
+  border: none;
+  animation: reveal-texto 0.5s 0.7s ease both;
+}
+
+/* ==========================================================================
+   Barra del jugador + carta siempre a mano
+   ========================================================================== */
+
+.jugador-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -1.5rem -1.5rem 1rem;
+  padding: 0.6rem 1rem;
+  background: rgba(7, 7, 11, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.mi-carta-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  text-align: left;
+  min-width: 0;
+}
+
+.mi-carta-thumb {
+  display: block;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--pink);
+  flex-shrink: 0;
+  transition: border-color 0.6s ease, box-shadow 0.6s ease;
+}
+
+.mi-carta-chip-texto {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.mi-carta-chip-texto strong {
+  font-size: 0.95rem;
+}
+
+.mi-carta-chip-texto span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-puntaje {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--panel);
+  border: 1px solid var(--yellow);
+  border-radius: 99px;
+  color: var(--yellow);
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#puntaje-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(0, 0, 0, 0.88);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#puntaje-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#puntaje-overlay .mi-carta-overlay-inner {
+  background: var(--panel);
+  border: 1px solid var(--yellow);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+#puntaje-historial-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+#puntaje-historial-lista li {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+
+.fase-pill {
+  background: var(--cyan);
+  color: #06100f;
+  font-weight: 800;
+  padding: 0.4rem 0.9rem;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.8s ease;
+}
+
+#mi-carta-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(0, 0, 0, 0.88);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#mi-carta-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mi-carta-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 320px);
+}
+
+#btn-cerrar-mi-carta {
+  width: 100%;
+  padding: 0.85rem;
+}
+
+.panel-na {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.na-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.na-titulo {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.na-estado {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ==========================================================================
+   El NA deforma tu carta — solo dentro de la partida, nunca en la selección
+   (en el carrusel el NA todavía no existe y arruinaría la lectura)
+   ========================================================================== */
+
+#pantalla-espera .carta,
+#mi-carta-overlay .carta {
+  transition: filter 0.6s ease, transform 0.6s ease;
+}
+
+body[data-na-tramo="alegre"] #pantalla-espera .carta,
+body[data-na-tramo="alegre"] #mi-carta-overlay .carta {
+  filter: saturate(1.15);
+}
+
+body[data-na-tramo="picante"] #pantalla-espera .carta,
+body[data-na-tramo="picante"] #mi-carta-overlay .carta {
+  filter: saturate(1.35) contrast(1.06);
+  transform: rotate(-0.6deg);
+}
+
+body[data-na-tramo="caos"] #pantalla-espera .carta,
+body[data-na-tramo="caos"] #mi-carta-overlay .carta {
+  filter: saturate(1.6) contrast(1.1) hue-rotate(-8deg);
+  transform: rotate(1deg);
+  animation: carta-latido 2.4s ease-in-out infinite;
+}
+
+body[data-na-tramo="irrecuperable"] #pantalla-espera .carta,
+body[data-na-tramo="irrecuperable"] #mi-carta-overlay .carta {
+  filter: saturate(1.8) contrast(1.15) blur(0.7px) hue-rotate(-14deg);
+  transform: rotate(-1.8deg) skewY(0.8deg);
+  animation: carta-latido 1.8s ease-in-out infinite;
+}
+
+body[data-na-tramo="leyenda"] #pantalla-espera .carta,
+body[data-na-tramo="leyenda"] #mi-carta-overlay .carta {
+  animation: carta-leyenda 3s linear infinite;
+}
+
+body[data-na-tramo="caos"] .mi-carta-thumb,
+body[data-na-tramo="irrecuperable"] .mi-carta-thumb {
+  border-color: var(--violet);
+  box-shadow: 0 0 12px var(--violet);
+}
+
+body[data-na-tramo="leyenda"] .mi-carta-thumb {
+  border-color: var(--yellow);
+  box-shadow: 0 0 16px var(--yellow);
+}
+
+@keyframes carta-latido {
+  0%, 100% {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55), 0 0 34px rgba(157, 66, 255, 0.75);
+  }
+}
+
+@keyframes carta-leyenda {
+  0% {
+    box-shadow: 0 0 26px rgba(255, 216, 74, 0.8);
+    filter: saturate(2.2) contrast(1.2) hue-rotate(20deg);
+  }
+  50% {
+    box-shadow: 0 0 44px rgba(255, 62, 157, 0.9);
+    filter: saturate(2.4) contrast(1.25) hue-rotate(-20deg);
+  }
+  100% {
+    box-shadow: 0 0 26px rgba(255, 216, 74, 0.8);
+    filter: saturate(2.2) contrast(1.2) hue-rotate(20deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carta-reveal,
+  #btn-reveal-listo,
+  .reveal-eyebrow,
+  #pantalla-espera .carta,
+  #mi-carta-overlay .carta {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Ambientación por fase — el clima de la pantalla acompaña la noche
+   ========================================================================== */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition: background 1.2s ease;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 176, 74, 0.16), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(255, 62, 157, 0.10), transparent 50%);
+}
+
+body[data-fase="boliche"]::before {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(157, 66, 255, 0.30), transparent 45%),
+    radial-gradient(circle at 80% 15%, rgba(255, 62, 157, 0.26), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(39, 226, 210, 0.18), transparent 55%);
+}
+
+body[data-fase="after"]::before {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(120, 160, 220, 0.20), transparent 55%),
+    radial-gradient(circle at 20% 90%, rgba(255, 190, 130, 0.12), transparent 50%);
+}
+
+body[data-fase="terminado"]::before {
+  background: radial-gradient(circle at 50% 30%, rgba(120, 120, 140, 0.16), transparent 60%);
+}
+
+body[data-fase="boliche"] .fase-pill,
+body[data-fase="boliche"] .dm-fase-pill {
+  background: var(--pink);
+  color: #1a0410;
+}
+
+body[data-fase="after"] .fase-pill,
+body[data-fase="after"] .dm-fase-pill {
+  background: #8fb4e8;
+  color: #05101f;
+}
+
+/* ==========================================================================
+   Jugadores como cartas en el panel del DM
+   ========================================================================== */
+
+.player-card {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+/* Carta chica del panel del DM. Unidades fijas, no cqw: a este tamaño las
+   unidades de container degradan a textos de 2px (ver cartaMiniHtml). */
+.carta-mini {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1054 / 1492;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #2c1a0e;
+  border: 2px solid #2c1a0e;
+}
+
+.carta-mini-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.2rem;
+  background: linear-gradient(160deg, #f5e6c8 0%, #d4b88a 100%);
+  text-align: center;
+}
+
+.carta-mini-monograma {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.1rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #5c4030;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.carta-mini-nombre {
+  font-size: 0.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: #3a2a1a;
+  text-transform: uppercase;
+}
+
+.player-carta {
+  width: 74px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.player-cuerpo {
+  min-width: 0;
+}
+
+.player-estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.estado-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid;
+}
+
+.estado-caos {
+  color: var(--violet);
+  border-color: var(--violet);
+  background: #1b0d2a;
+}
+
+.estado-debilidad {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: #2a0d14;
+}
+
+.estado-zona {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: #0a2a2a;
 }

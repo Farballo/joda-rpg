@@ -28,7 +28,7 @@ def test_dobles_1_1_es_papelon_automatico():
 
 
 def test_dobles_6_6_es_exito_con_bonus():
-    resultado = tirar(na=0, stat="presencia", stat_valor=0, tirador=secuencia(6, 6))
+    resultado = tirar(na=0, stat="aguante", stat_valor=0, tirador=secuencia(6, 6))
     assert resultado["tipo"] == "exito_bonus"
     assert resultado["suma_dados"] == 12
 
@@ -50,13 +50,13 @@ def test_modificador_na_sobrio_0_1_no_modifica():
 
 def test_modificador_na_alegre_2_3_suma_2_en_stat_social():
     assert modificador_na(2, "carisma") == 2
-    assert modificador_na(3, "presencia") == 2
+    assert modificador_na(3, "carisma") == 2
     assert modificador_na(2, "astucia") == 0
 
 
 def test_modificador_na_picante_4_5_suma_4_social_y_resta_2_logicas():
     assert modificador_na(4, "carisma") == 4
-    assert modificador_na(5, "presencia") == 4
+    assert modificador_na(5, "carisma") == 4
     assert modificador_na(4, "astucia") == -2
     assert modificador_na(5, "astucia") == -2
     assert modificador_na(4, "aguante") == 0

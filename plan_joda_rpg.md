@@ -35,19 +35,32 @@ grupo, o incluso hotspot del celu si la wifi falla) y cubre:
   permite, el jugador elige *cómo* encara el problema (ej. chamuyar,
   coimear, apurar) y esa elección determina qué stat se tira — ver
   sección 5.8
-- Sistema de **encuentros con NPC por turnos**: NPCs de tipo "levante"
-  (intentar levantarse a alguien, con puntaje de atractivo y dificultad de
-  chamuyo) y de tipo "confrontación" (pelear/convencer/sobornar a alguien,
-  como un patovica o un grupo de rugbiers). El DM asigna el encuentro a un
-  jugador específico — ver sección 2 y 5.5
+- Sistema de **encuentros con NPC por turnos, resueltos con un árbol de
+  diálogo de 1 a 3 rondas encadenadas**: NPCs de tipo "levante" (intentar
+  levantarse a alguien, con puntaje de atractivo y dificultad de chamuyo
+  por ronda) y de tipo "confrontación" (pelear/convencer/sobornar a
+  alguien, como un patovica o un grupo de rugbiers, con dificultad
+  automática por ronda). Cada ronda tira dados de verdad y suma a un
+  acumulado; recién al llegar a una hoja del árbol (o cuando el DM corta
+  con "Otro") se compara ese acumulado contra la dificultad total. Todos
+  los NPCs se revelan igual (global); el encuentro es un paso aparte que
+  el DM le asigna a un jugador específico sobre un NPC ya revelado — ver
+  sección 2 y 5.5
+- **Puntaje total de la noche por jugador**, con historial de qué resolvió
+  y qué no: +1 por situación resuelta, +1 por confrontación ganada,
+  +`puntaje_lindura` del NPC por levante exitoso, 0 en cualquier fracaso.
+  Visible tanto para el DM (ranking con detalle por jugador) como para
+  cada jugador (su propio historial) — ver sección 2 y 6
 - Narración asistida por IA local (Ollama) opcional, disparada por el DM
 
 **Fuera de alcance del MVP** (se agrega después si el MVP funciona bien en
 una previa real): sistema de Reputación, recompensas de coronación,
 persistencia entre reinicios del server. *(El sistema de Encare/chamuyo
 que este documento excluía originalmente ya no está fuera de alcance —
-ver la fila "Encuentros de NPC (levante/confrontación)" en la sección 2:
-se agregó explícitamente a pedido, en una versión acotada.)*
+ver la fila "Encare por rondas (árbol de decisiones)" en la sección 2:
+se agregó explícitamente a pedido, en una versión acotada, y después se
+extendió a un árbol de varias rondas con puntaje total — también a
+pedido explícito.)*
 
 ---
 
@@ -68,13 +81,19 @@ se agregó explícitamente a pedido, en una versión acotada.)*
 | Posicionamiento en el mapa | **Zonas fijas por variante de mapa**, no drag & drop libre. Cada fase define una o más variantes de mapa en `data/mapa.json` (ej. distintos deptos/boliches), cada una con sus zonas (living, cocina, barra, VIP, etc.) y su posición/tamaño (`pos`, en % del contenedor). El DM asigna un jugador o un NPC a una zona con un click/dropdown, no arrastrando tokens a coordenadas libres |
 | Mapas configurables con nombre + posición | *(Revierte la fila anterior de esta tabla en versiones previas del plan, que ponía la posición en CSS.)* Cada fase puede tener **varias variantes de mapa** con nombre visible en pantalla (ej. "Depto de Cruza" vs "Depto de Banana"), para que la previa/el boliche no sean siempre el mismo lugar. La posición de cada zona (`pos: {left, top, width, height}`) se movió de `static/style.css` a `data/mapa.json` porque cada variante puede tener zonas distintas — hardcodear la posición por `id` de zona en CSS no escala a mapas configurables. Al entrar a una fase se elige una variante al azar; el DM puede forzar una variante puntual con el mensaje `cambiar_mapa` sin cambiar de fase — ver sección 5.6 y 7 |
 | Volver atrás de fase | El DM puede retroceder una fase (`retroceder_fase`, sección 7) además de avanzar. Comparte la misma lógica de "entrar a una fase" que avanzar (`avanzar_fase`): elige una nueva variante de mapa al azar, limpia la situación activa y los NPCs revelados, y resetea la zona de todos los jugadores a la primera de la variante nueva. No aplica el reset de NA de Leyenda Urbana (eso es específico de *entrar* al After, no de salir). No hace nada si ya está en la primera fase (`previa`) |
-| Revelado de NPCs | El DM elige un NPC del "mazo" de la fase actual (`data/npcs.json`, filtrado por su campo `fase`) y lo revela en una zona. La carta se dispara a todos los jugadores y queda como marcador fijo en el mapa. Los botones de la carta ("Hablar"/"Ignorar") sólo marcan que el jugador la vio — igual que con los eventos de fase, el DM sigue narrando y aplicando consecuencias (NA, prenda) a mano, sin lógica automática |
+| Revelado de NPCs | **Un solo flujo de revelado para todos los tipos de NPC.** El DM elige un NPC del "mazo" de la fase actual (`data/npcs.json`, filtrado por su campo `fase`) y lo revela en una zona, sin importar si es `ambiente`, `levante` o `confrontacion`. La carta se dispara a todos los jugadores y queda como marcador fijo en el mapa. Los botones de la carta ("Hablar"/"Ignorar") sólo marcan que el jugador la vio — igual que con los eventos de fase, el DM sigue narrando y aplicando consecuencias (NA, prenda) a mano, sin lógica automática. *(Revierte el esquema anterior, donde los NPCs de levante/confrontación tenían su propio flujo de revelado dirigido a un jugador: revelar y disparar el encuentro eran la misma acción. Ahora son **dos pasos separados** — ver la fila de abajo.)* |
+| Revelar ≠ iniciar encuentro | Revelar un NPC nunca dispara mecánica. Si el NPC es de tipo `levante` o `confrontacion`, el encuentro es un **segundo paso aparte**: sobre un NPC **ya revelado**, el DM elige un jugador y arranca el encuentro (`iniciar_encuentro`, sección 7). Narrativamente: primero el personaje aparece en escena y lo ve todo el mundo; después, en algún momento, se cruza con alguien puntual |
+| Un encuentro por vez (bloqueo global) | **No puede haber más de un encuentro sin resolver en toda la partida a la vez**, ni siquiera con NPCs distintos o jugadores distintos. El bloqueo es global, no por jugador: en la mesa real el DM narra un encuentro por vez y tener dos escenas abiertas en paralelo es más confuso que útil. Mientras hay uno pendiente, el panel del DM deshabilita el botón de iniciar y el server rechaza el mensaje. Se destraba de dos formas: que el jugador tire (queda `resuelto`), o que el DM saque al NPC de escena con `ocultar_npc` (que también cancela su encuentro) |
 | Estilo visual | Estética "neon boliche" de `mockups/JODA_RPG_mockups_neon_boliche.html` y `mockups/JODA_RPG_mockups_mapas_vivos.html`: fondo oscuro, acentos cian/rosa/violeta, tipografía grande y en negrita, tarjetas con bordes suaves. Se implementa con HTML/CSS plano (divs con posición absoluta, como en los mockups), sin canvas ni librerías de mapas — ver sección 5.7 para los tokens de diseño |
 | Alcance de los turnos | **Solo los encuentros de NPC** (levante/confrontación, ver fila de abajo) son por turnos. El resto del juego — tiradas libres de stat, NA, prendas, situaciones de fase — sigue funcionando como ya está: cualquier jugador actúa cuando quiere, sin esperar turno. No se reestructura lo ya construido en los milestones 1-9 |
 | Orden de turno en encuentros | El DM asigna a mano qué jugador le toca en cada encuentro de NPC (levante o confrontación), sin rotación automática fija. Más trabajo para el DM que una cola automática, pero más flexible para narrar (ej. asignarle el encuentro al jugador que más sentido tenga en ese momento) |
-| Encuentros de NPC (levante/confrontación) | Se agrega `tipo` a `data/npcs.json`: `"ambiente"` (los NPCs ya existentes, decorativos, revelado global — sin cambios), `"levante"` (intentar levantarse a alguien: `puntaje_lindura` 1-10 y `dificultad_chamuyo`) o `"confrontacion"` (pelear/convencer/sobornar a alguien: `opciones` con stat sugerido por enfoque, mismo esquema que la fila de abajo). A diferencia de los NPCs ambiente, estos se revelan **dirigidos a un jugador específico** (el del turno asignado), no a todos — ver sección 5.5 y 7 |
-| Misterio de lindura en el levante | Si el jugador objetivo tiene NA alto (propuesta: **NA ≥ 8, "Irrecuperable"**, umbral ajustable), la carta del NPC de levante le llega **sin revelar**: sin nombre, sin imagen, sin `puntaje_lindura` — solo "❓ Alguien te llama la atención". El jugador igual puede intentar el chamuyo a ciegas. Después de resolver el intento (haya salido bien o mal), se revela la identidad real sin importar el NA — el misterio es previo a la tirada, no una tirada distinta ni un fallo automático. No hace falta lógica de "consuelo" (asignar otro NPC feo automáticamente): alcanza con no mostrar el dato, la sorpresa la da la carta ya revelada al final |
-| Situaciones con opciones | Los eventos de `data/eventos.json` pueden tener un campo opcional `opciones` (mismo esquema que en NPCs de confrontación): 2-3 formas distintas de encarar la situación, cada una mapeada a un stat distinto (ej. "Lo chamuyás" → Carisma, "Lo coimeás" → Suerte, "Lo apurás" → Presencia). Si el evento tiene `opciones`, el jugador elige una en vez de tirar cualquiera de sus 5 stats libremente; si no las tiene, se comporta como hoy (tirada libre, el DM decide qué stat pedir en voz alta). No todos los eventos necesitan `opciones` — es un campo opcional, se completa evento por evento más adelante (ver sección 5.8) |
+| Encuentros de NPC (levante/confrontación) | Se agrega `tipo` a `data/npcs.json`: `"ambiente"` (los NPCs ya existentes, decorativos, sin mecánica propia), `"levante"` (intentar levantarse a alguien: `puntaje_lindura` 1-10 y `dificultad_chamuyo` por ronda) o `"confrontacion"` (pelear/convencer/sobornar a alguien: `dificultad` automática por ronda, misma escala que el resto de la app). Los tres se **revelan igual** (revelado global, ver arriba); lo que distingue a levante/confrontación es que además admiten un **encuentro dirigido a un jugador específico** encima del reveal, resuelto con el árbol de diálogo de la fila de abajo — ver sección 5.5 y 7 |
+| Encare por rondas (árbol de decisiones) | El encuentro de un NPC de levante/confrontación **no se resuelve en una sola tirada**: `data/npcs.json` le agrega un campo `arbol` con 1 a 3 rondas ramificadas (`nodos`, cada uno con 2 `opciones` que llevan a un nodo distinto o cierran el encuentro). Cada ronda elegida tira dados de verdad y suma su `total` a un `acumulado` del encuentro; recién al llegar a una opción sin `siguiente` (una hoja del árbol) se resuelve todo junto: `exito = acumulado >= dificultad_por_ronda * rondas_jugadas`. Reemplaza el esquema anterior de una sola tirada (`opciones` planas en confrontación, tirada única en levante) — ver sección 5.5 y 7. El servidor camina el árbol con una única función, `intentar_encare`, para los dos tipos |
+| Override del DM en cualquier ronda ("Otro") | El DM tiene, en cualquier ronda del árbol, la posibilidad de narrar algo propio en vez de usar las opciones predefinidas — mismo patrón que el "Otro (decide DM)" que ya existe en situaciones (sección 5.3/5.8). El jugador manda el `stat` que el DM le dijo en voz alta (`stat_otro`); esa ronda cierra el encuentro ahí mismo (como si fuera una hoja del árbol), calculando la dificultad total solo con las rondas efectivamente jugadas hasta ese punto. El servidor no necesita saber qué narró el DM, solo qué stat tirar |
+| Reutilización de NPCs de encuentro | Un NPC de encuentro **no se agota al usarse**: una vez que su encuentro queda `resuelto`, se le puede iniciar otro al mismo jugador o a otro más adelante en la misma fase (un mismo personaje puede cruzarse con más de uno en la noche). El NPC sigue revelado en el mapa todo el tiempo; lo único que se resetea es el encuentro encima suyo (vuelve a arrancar del nodo `inicio` del árbol, con `acumulado` y `rondas_jugadas` en cero) |
+| Puntaje total de la noche | Cada jugador acumula un `puntaje` numérico durante toda la partida: +1 por situación resuelta con éxito, +1 por confrontación ganada, +`puntaje_lindura` del NPC por levante exitoso, 0 en cualquier fracaso (de situación o de encuentro). Cada resultado también se agrega a un `historial` por jugador (tipo, nombre del NPC/situación, éxito, puntos). El puntaje y el historial se registran **una sola vez por encuentro resuelto** (al llegar a la hoja del árbol o al cortar con "Otro"), no una vez por ronda. Visible en el panel del DM (tab con ranking + detalle plegable por jugador) y del lado del jugador (chip con overlay de su propio historial) — ver sección 6 y 7 |
+| Misterio de lindura en el levante | Si el jugador objetivo tiene NA alto (propuesta: **NA ≥ 8, "Irrecuperable"**, umbral ajustable), la **carta del encuentro** le llega **sin revelar**: sin nombre, sin imagen, sin `puntaje_lindura` — solo "❓ Alguien te llama la atención". El jugador igual puede intentar el chamuyo a ciegas. Después de resolver el intento (haya salido bien o mal), se revela la identidad real sin importar el NA — el misterio es previo a la tirada, no una tirada distinta ni un fallo automático. **El misterio vive solo en la carta del encuentro, no en el reveal:** como el reveal es global, el NPC ya se ve con nombre y todo en el mapa (para el borracho también). La relectura narrativa es que ese jugador puntual está demasiado en pedo para reconocer, en el momento de encararlo, a alguien que el resto sí reconoce. *(Cambió respecto del esquema anterior, donde reveal y encuentro eran la misma acción y el jugador con NA alto no veía al NPC en ningún lado.)* |
+| Situaciones con opciones | *(Decisión histórica, superada por el rediseño de situaciones de la sección 5.3/5.8: `opciones` ya no trae un `stat` por opción, la situación entera tiene uno solo.)* Los eventos de `data/eventos.json` pueden tener un campo opcional `opciones`. Si el evento tiene `opciones`, el jugador elige una en vez de tirar cualquiera de sus 4 stats libremente; si no las tiene, se comporta como hoy (tirada libre, el DM decide qué stat pedir en voz alta). No todos los eventos necesitan `opciones` — es un campo opcional, se completa evento por evento más adelante (ver sección 5.8) |
 | Selección de próxima situación/NPC | El DM elige explícitamente la "situación actual" de la fase, de a una por vez: botón "🎲 Aleatoria" (elige una no usada todavía de `eventos.json`) o selecciona una puntual de la lista. Mismo patrón para NPCs (ya existía el modo "elegir" desde el mazo; se agrega el modo "🎲 Aleatorio"). Reemplaza la vista de milestone 6 que mostraba todas las tarjetas de la fase como referencia estática — ahora hay una sola "situación activa" visible para todos, más prolijo y más parecido al flujo de "⚡ Siguiente situación" de los mockups |
 
 ---
@@ -129,109 +148,139 @@ Los valores de `stats` están duplicados respecto al diseño original de la
 mesa (ver fila "Stats de personajes" en la sección 2) — más rango numérico
 para una escala de NA 0-10 y una tirada de 2d6.
 
+**`habilidad_unica` se sacó del todo** (y con ella `habilidad_usada_fase`/
+`habilidad_usada_noche` del estado del jugador, sección 6, y el mensaje
+`usar_habilidad` que nunca se llegó a implementar) — a pedido explícito,
+por ser demasiada mecánica extra para gestionar en una previa real. En su
+lugar, `debilidad` pasó de ser solo texto de sabor a un mecanismo activo:
+tiene un `stat` y un `modificador` concretos, y el DM la puede **activar y
+desactivar a mano** para un jugador puntual (mensajes `activar_debilidad` /
+`desactivar_debilidad`, sección 7) — el jugador no la puede desactivar él
+mismo. Mientras está activa se ve en la pantalla del jugador (igual que
+Modo Caos) y el modificador se aplica de verdad a cualquier tirada de ese
+stat (`stat_efectivo` en `game_state.py`), no es solo texto para el DM.
+
+**El stat Presencia se sacó del todo** (a pedido explícito, para tener
+menos cosas que gestionar en una previa real) — quedan **4 stats**:
+Carisma, Aguante, Astucia, Suerte. `dice.SOCIALES` pasó a ser solo
+`{"carisma"}` (sección 5.4/8). Esto obligó a reasignar todo lo que
+dependía de Presencia:
+- **Debilidad** de Payaso y Tímido, que antes pegaban sobre Presencia,
+  ahora pegan sobre Astucia y Carisma respectivamente (ver más abajo).
+- **Stat de situaciones** ("Estado del depto", "Alguien los graba",
+  "Baile horrible", "Conversación profunda", "Discusión heavy" —
+  sección 5.3) y una opción de NPC de confrontación (`hermano_mayor` —
+  sección 5.5), reasignados a otro stat que tuviera sentido narrativo.
+- **El Intenso** tenía Presencia +4 como su stat más alto — al sacarla se
+  quedaba sin ningún stat destacado (el resto queda en 0/-2), a
+  diferencia de los otros 5 personajes que sí conservan un +4 en algún
+  lado. Para no dejarlo en desventaja frente al resto, ese +4 se movió a
+  Carisma (quedó en +4, antes +2) — es un ajuste de balance, no un pedido
+  explícito, así que se puede revisar si no cierra con el resto.
+
 ```json
 [
   {
     "id": "intenso",
     "nombre": "El Intenso",
     "frase": "Si no pasa algo ahora, no pasa nunca.",
-    "stats": { "carisma": 2, "aguante": 0, "astucia": -2, "presencia": 4, "suerte": -2 },
-    "habilidad_unica": {
-      "nombre": "Vamos todos",
-      "usos": "1 vez por fase",
-      "efecto": "Antes de una tirada grupal, obliga a que todos tiren. Si al menos uno saca 6, éxito total grupal. Si nadie saca 6, la consecuencia negativa es colectiva y aumentada."
-    },
+    "stats": { "carisma": 4, "aguante": 0, "astucia": -2, "suerte": -2 },
     "modo_caos": {
       "nombre": "AHORA O NUNCA",
       "efecto": "Una vez por escena, puede forzar una acción extrema sin tirar dados (encarar, gritar, subirse a algo, confrontar a alguien).",
       "consecuencia": "El DM elige una consecuencia grave: expulsión, pelea, ruptura social o cambio forzado de fase."
     },
-    "debilidad": "No puede ignorar provocaciones. Si alguien lo desafía públicamente, debe reaccionar aunque pierda."
+    "debilidad": {
+      "nombre": "No puede quedarse quieto",
+      "descripcion": "No puede ignorar provocaciones. Si alguien lo desafía públicamente, debe reaccionar aunque pierda.",
+      "stat": "astucia",
+      "modificador": -2
+    }
   },
   {
     "id": "suertudo",
     "nombre": "El Suertudo",
     "frase": "No sé cómo pasó, pero salió.",
-    "stats": { "carisma": 0, "aguante": -2, "astucia": 0, "presencia": -2, "suerte": 4 },
-    "habilidad_unica": {
-      "nombre": "Justo zafó",
-      "usos": "1 vez por fase",
-      "efecto": "Cuando fallás una tirada, tirá 1D6. Con 4-6, el fallo se transforma en éxito raro, fallo sin consecuencias, o problema para otro jugador."
-    },
+    "stats": { "carisma": 0, "aguante": -2, "astucia": 0, "suerte": 4 },
     "modo_caos": {
       "nombre": "Modo Dios",
       "efecto": "Todas las tiradas cuentan con +2 de suerte adicional. Podés convertir 1 fallo por fase en éxito total.",
       "consecuencia": "Al final de la fase, tirá 1D6. Con 1-2, el karma se guarda: penalizador narrativo acumulado para la próxima fase."
     },
-    "debilidad": "Si algo depende de planificación tiene -1 a la tirada. Subestima el peligro porque 'siempre zafa'."
+    "debilidad": {
+      "nombre": "Subestima el peligro",
+      "descripcion": "Si algo depende de planificación, se le complica. Confía tanto en que \"siempre zafa\" que no ve venir el problema.",
+      "stat": "astucia",
+      "modificador": -2
+    }
   },
   {
     "id": "payaso",
     "nombre": "El Payaso",
     "frase": "Pará, pará... mirá esto.",
-    "stats": { "carisma": 2, "aguante": 0, "astucia": 2, "presencia": -2, "suerte": 0 },
-    "habilidad_unica": {
-      "nombre": "Hago un show",
-      "usos": "1 vez por fase",
-      "efecto": "Podés reemplazar cualquier stat por Carisma en una tirada si describís cómo convertís la situación en un espectáculo. Riesgo: si fallás, el papelón es doble."
-    },
+    "stats": { "carisma": 2, "aguante": 0, "astucia": 2, "suerte": 0 },
     "modo_caos": {
       "nombre": "Caos Puro",
       "efecto": "Cada vez que fallás una tirada, podés repetirla. Si tiene éxito, arrastra a otro jugador a la escena.",
       "consecuencia": "Cada repetición: Alcohol +1. Nunca es solo: siempre involucra a alguien más."
     },
-    "debilidad": "Si hay silencio incómodo, tiene que intervenir. Le cuesta no exagerar incluso cuando no conviene."
+    "debilidad": {
+      "nombre": "No banca el silencio",
+      "descripcion": "Si hay un silencio incómodo, tiene que intervenir. Le cuesta no exagerar incluso cuando no conviene.",
+      "stat": "astucia",
+      "modificador": -2
+    }
   },
   {
     "id": "gymbro",
     "nombre": "El Gym Bro",
     "frase": "Tranqui, yo me la banco.",
-    "stats": { "carisma": -2, "aguante": 4, "astucia": -2, "presencia": 2, "suerte": 0 },
-    "habilidad_unica": {
-      "nombre": "Banco todo",
-      "usos": "1 vez por noche",
-      "efecto": "Ignorás la primera consecuencia física que sufras en la noche (empujón, caída, cansancio extremo, penalización de aguante)."
-    },
+    "stats": { "carisma": -2, "aguante": 4, "astucia": -2, "suerte": 0 },
     "modo_caos": {
       "nombre": "Animal",
-      "efecto": "Aguante pasa a +3. Ignora dolor, empujones y cansancio.",
+      "efecto": "Aguante pasa a +6. Ignora dolor, empujones y cansancio.",
       "consecuencia": "Todas las tiradas de Astucia fallan automáticamente. Tiende a resolver todo con el cuerpo."
     },
-    "debilidad": "Si alguien lo desafía físicamente tiene que aceptar o escalar. Le cuesta leer indirectas y límites sociales."
+    "debilidad": {
+      "nombre": "No lee la sala",
+      "descripcion": "Si alguien lo desafía físicamente, tiene que aceptar o escalar. Le cuesta leer indirectas y límites sociales.",
+      "stat": "astucia",
+      "modificador": -2
+    }
   },
   {
     "id": "timido",
     "nombre": "El Tímido",
     "frase": "Yo estoy bien acá... creo.",
-    "stats": { "carisma": -2, "aguante": 2, "astucia": 4, "presencia": -2, "suerte": 0 },
-    "habilidad_unica": {
-      "nombre": "Observador Silencioso",
-      "usos": "1 vez por noche",
-      "efecto": "Antes de una tirada social (Carisma o Presencia), elegís: +2 a la tirada, o repetir el dado."
-    },
+    "stats": { "carisma": -2, "aguante": 2, "astucia": 4, "suerte": 0 },
     "modo_caos": {
       "nombre": "Me solté",
       "efecto": "Carisma pasa de -1 a +1. Puede iniciar interacciones sociales sin penalización.",
-      "consecuencia": "Después de cada interacción social, tirá 1D6. Con 1-3, se arrepiente (pierde Presencia hasta la próxima escena). Con 4-6, se entusiasma (Alcohol +1)."
+      "consecuencia": "Después de cada interacción social, tirá 1D6. Con 1-3, se arrepiente (pierde Carisma hasta la próxima escena). Con 4-6, se entusiasma (Alcohol +1)."
     },
-    "debilidad": "Si hay mucha gente o atención encima, tiene -1 de Presencia. Evita liderar situaciones, incluso cuando tiene razón."
+    "debilidad": {
+      "nombre": "Se achica con la atención encima",
+      "descripcion": "Evita liderar situaciones incluso cuando tiene razón. Si hay mucha gente o atención encima, se le nota en la cara.",
+      "stat": "carisma",
+      "modificador": -2
+    }
   },
   {
     "id": "fachero",
     "nombre": "El Fachero",
     "frase": "No hace nada extraordinario... pero todo le queda bien.",
-    "stats": { "carisma": 4, "aguante": 0, "astucia": 0, "presencia": 2, "suerte": -2 },
-    "habilidad_unica": {
-      "nombre": "Cara de Boliche",
-      "usos": "1 vez por noche",
-      "efecto": "Cuando fallás una tirada de Carisma, podés convertirla en éxito parcial. El DM elige la consecuencia: sale pero cuesta algo, sale pero genera celos, o sale pero quedás expuesto."
-    },
+    "stats": { "carisma": 4, "aguante": 0, "astucia": 0, "suerte": -2 },
     "modo_caos": {
       "nombre": "Invencible",
       "efecto": "Todos los fallos de Carisma se repiten automáticamente.",
       "consecuencia": "Si vuelve a fallar: se genera una rivalidad inmediata, o aparece un quilombo por ego."
     },
-    "debilidad": "Si alguien lo supera en público, tiene -1 a la siguiente tirada social. Le cuesta aceptar el rechazo o la indiferencia."
+    "debilidad": {
+      "nombre": "No banca el rechazo",
+      "descripcion": "Le cuesta aceptar el rechazo o la indiferencia. Si alguien lo supera en público, se le nota enseguida.",
+      "stat": "carisma",
+      "modificador": -2
+    }
   }
 ]
 ```
@@ -263,58 +312,148 @@ para una escala de NA 0-10 y una tirada de 2d6.
 
 ### 5.3 `data/eventos.json`
 
-Texto de referencia para el DM — no dispara lógica automática de
-consecuencias (eso lo sigue decidiendo el DM a mano, como siempre). Cada
-evento puede tener opcionalmente un campo `opciones` (ver esquema
-compartido en 5.8): si lo tiene, el jugador elige entre 2-3 formas
-distintas de encarar la situación y esa elección define qué stat se tira;
-si no lo tiene, sigue funcionando como hasta ahora (tirada libre, el DM
-pide el stat en voz alta). No hace falta agregarle `opciones` a los 26
-eventos ya definidos de una — se va completando evento por evento más
-adelante. Como referencia de la forma, así quedaría el evento "DNI dudoso"
-con el ejemplo que diste (patovica que no te deja entrar):
+Cada situación tiene título, una descripción narrativa (`texto`, en
+segunda persona, lo que el jugador ve/vive), un umbral numérico
+(`dificultad`, misma escala que la sección 8: 10 fácil · 13 normal · 16
+difícil · 19+ muy difícil) que el servidor usa para calcular
+éxito/fracaso automáticamente, y `opciones`: 2-3 formas de encarar la
+situación, cada una con su propio `stat` — **el stat varía según la
+opción elegida** (a pedido explícito; antes era un solo `stat` fijo para
+toda la situación). Esto vuelve a ser el mismo esquema que `opciones` en
+NPCs de confrontación (sección 5.5/5.8) — dejaron de ser esquemas
+distintos.
 
-```json
-{ "titulo": "DNI dudoso", "texto": "El patovica no te quiere dejar entrar sin DNI.", "opciones": [
-  { "texto": "Lo tratás de chamuyar", "stat": "carisma" },
-  { "texto": "Lo coimeás", "stat": "suerte" },
-  { "texto": "Lo apurás", "stat": "presencia" }
-] }
-```
+Además de las `opciones` del dato, el jugador **siempre** tiene una
+opción extra que no está en `eventos.json`: **"Otro (decide DM)"**. La
+arma el cliente (`OTRO_OPCION` en `game_state.py` y en `jugador.js`),
+deja elegir cualquiera de los 4 stats jugables, y sirve para cuando el
+DM quiere pedir un stat puntual en voz alta que no está entre las
+opciones predefinidas — es la única vía que queda para una tirada
+"libre" ligada a una situación (a diferencia de `tirar_dado`, que sigue
+existiendo aparte para tiradas totalmente sueltas sin situación de por
+medio).
+
+Esto sigue sin ser lógica ramificada automática de *consecuencias*: el
+servidor solo calcula si la tirada superó la `dificultad` (igual que ya
+hace con `dificultad_chamuyo` en NPCs de levante); el DM sigue siendo
+quien decide y aplica a mano qué pasa después (NA, prenda), como
+siempre. La situación se resuelve con la **primera** tirada de cualquier
+jugador y queda cerrada para el resto (igual que un encuentro de NPC con
+`resuelto`) — no tiene sentido que cinco jugadores tiren la misma
+situación grupal cinco veces.
 
 ```json
 {
   "previa": [
-    { "titulo": "¿Quién trae alcohol?", "texto": "Un jugador se ofrece (tira Astucia o Suerte) o hay tirada grupal de Suerte. Éxito: hay alcohol suficiente. Fallo: falta alcohol, alguien arranca con +1 NA de bronca o prenda." },
-    { "titulo": "Estado del depto", "texto": "Tirada de Astucia o Presencia. Éxito: +1 a la primera tirada social del boliche. Fallo: quilombo (falta hielo, baño inutilizable), prenda física temprana." },
-    { "titulo": "Las minas, ¿llegan?", "texto": "Tirada de Carisma o Suerte. Éxito: llegan, sube el clima, +1 NA para todos. Fallo: no llegan, alguien toma de más." },
-    { "titulo": "Primer papelón", "texto": "El jugador más pasado tira Carisma. Éxito: anécdota graciosa. Fallo: prenda inmediata. 1 natural: papelón legendario." },
-    { "titulo": "Decidir cuándo salir", "texto": "Tirada grupal de Astucia. Éxito: salen en el momento justo. Fallo: salen tarde, temprano, o alguien se queda atrás." }
+    { "titulo": "¿Quién trae alcohol?", "texto": "Entrás al departamento, mirás la mesa y no hay ni una botella de agua. En ese momento dudás que alguien se haya hecho cargo de comprar para tomar.", "dificultad": 13, "opciones": [
+      { "texto": "Preguntar si alguien compró", "stat": "astucia" },
+      { "texto": "Abrir la heladera para revisar", "stat": "suerte" }
+    ] },
+    { "titulo": "Estado del depto", "texto": "Faltan minutos para que empiecen a llegar y todavía no está claro si el lugar aguanta la previa: hielo, vasos, y un baño que funcione.", "dificultad": 13, "opciones": [
+      { "texto": "Organizar rápido antes de que lleguen todos", "stat": "astucia" },
+      { "texto": "Repartir tareas entre los que están", "stat": "carisma" }
+    ] },
+    { "titulo": "Las minas, ¿llegan?", "texto": "El grupo de la otra previa todavía no confirmó y el clima empieza a bajar un poco. Alguien tiene que hacer algo para que se sumen.", "dificultad": 13, "opciones": [
+      { "texto": "Mandarles un mensaje con onda", "stat": "carisma" },
+      { "texto": "Llamarlas para insistir un poco", "stat": "suerte" }
+    ] },
+    { "titulo": "Primer papelón", "texto": "El que ya está más pasado de la cuenta se resbala con algo — un comentario, un paso en falso, un vaso volcado — y todas las miradas van para ahí.", "dificultad": 13, "opciones": [
+      { "texto": "Reírte de vos mismo antes que los demás", "stat": "carisma" },
+      { "texto": "Disimular como si no hubiera pasado nada", "stat": "astucia" }
+    ] },
+    { "titulo": "Decidir cuándo salir", "texto": "Ya es tarde, todos están con ganas, pero nadie se decide a cortar la previa y arrancar para el boliche.", "dificultad": 13, "opciones": [
+      { "texto": "Proponer salir ya", "stat": "carisma" },
+      { "texto": "Calcular los tiempos antes de decidir", "stat": "astucia" }
+    ] }
   ],
   "boliche": [
-    { "titulo": "Patova con ganas de romper las bolas", "texto": "Un jugador tira Carisma. Éxito: pasa. Fallo: -1 Carisma toda la noche." },
-    { "titulo": "DNI dudoso", "texto": "Tirada de Suerte. Éxito: zafa. Fallo: prenda inmediata o espera afuera." },
-    { "titulo": "Tragos carísimos", "texto": "El grupo elige: pagar (nada) o ratonear (-1 Carisma colectivo)." },
-    { "titulo": "Shot de regalo sospechoso", "texto": "Quien lo toma: +1 NA, tira 1d6. 1-2: penalización. 5-6: buff inesperado." },
-    { "titulo": "Empujón fuerte", "texto": "Dos jugadores tiran Carisma o Aguante. El que pierde: +1 NA o prenda." },
-    { "titulo": "Música de mierda", "texto": "Todos -1 Carisma. El Payaso puede anularlo automáticamente." },
-    { "titulo": "Alguien los graba", "texto": "Elegir: actuar normal (difícil), exagerar (riesgo alto) o esconderse (-1 Carisma)." },
-    { "titulo": "Baile horrible", "texto": "Si se rolea con confianza: +1 Carisma. Si no: -1 Carisma y +1 NA." },
-    { "titulo": "Se pierde un jugador", "texto": "Ese jugador juega solo 1 ronda. Si falla una tirada: +1 NA automático." },
-    { "titulo": "Alguien vomita", "texto": "Ese jugador entra en Modo Caos inmediato. Los cercanos tiran Suerte o reciben penalización social." },
-    { "titulo": "Momento épico", "texto": "Algo sale increíblemente bien. El grupo elige: buff colectivo, cancelar una prenda, o bajar NA a uno." },
-    { "titulo": "Caos total de boliche", "texto": "Todos +1 NA. Se activa una prenda random. El DM describe algo que va a traer consecuencias en el after." }
+    { "titulo": "Patova con ganas de romper las bolas", "texto": "En la puerta, el patovica te mira de arriba a abajo con cara de pocos amigos. Parece que hoy decidió complicarle la entrada a todo el mundo.", "dificultad": 16, "opciones": [
+      { "texto": "Hacerte el piola y charlar", "stat": "carisma" },
+      { "texto": "Mostrar que sos conocido del lugar", "stat": "suerte" }
+    ] },
+    { "titulo": "DNI dudoso", "texto": "Se lo das al de seguridad y lo mira más tiempo del necesario, comparando la foto con tu cara como si algo no le cerrara.", "dificultad": 13, "opciones": [
+      { "texto": "Entregarlo con total normalidad", "stat": "suerte" },
+      { "texto": "Distraerlo con un comentario", "stat": "carisma" }
+    ] },
+    { "titulo": "Tragos carísimos", "texto": "Llegás a la barra y ves los precios: una fortuna por trago. El barman espera tu pedido con cara de que no va a regalar nada.", "dificultad": 13, "opciones": [
+      { "texto": "Pedir un descuento por grupo", "stat": "carisma" },
+      { "texto": "Buscar alguna promo o 2x1", "stat": "astucia" }
+    ] },
+    { "titulo": "Shot de regalo sospechoso", "texto": "Alguien te acerca un shot de un color que no existe en la naturaleza. \"Invita la casa\", dice, sin dar más detalles.", "dificultad": 13, "opciones": [
+      { "texto": "Tomarlo de un trago sin preguntar", "stat": "aguante" },
+      { "texto": "Olerlo primero antes de decidir", "stat": "astucia" }
+    ] },
+    { "titulo": "Empujón fuerte", "texto": "En medio de la pista alguien te choca fuerte sin querer y por un segundo perdés el equilibrio en pleno movimiento.", "dificultad": 13, "opciones": [
+      { "texto": "Recuperar el equilibrio al toque", "stat": "aguante" },
+      { "texto": "Devolver el empujón como si nada", "stat": "suerte" }
+    ] },
+    { "titulo": "Música de mierda", "texto": "El DJ pone un tema que nadie banca y en un segundo el clima de la pista se cae en picada.", "dificultad": 13, "opciones": [
+      { "texto": "Pedirle al DJ que cambie el tema", "stat": "carisma" },
+      { "texto": "Arrancar a bailar igual para arrastrar al resto", "stat": "aguante" }
+    ] },
+    { "titulo": "Alguien los graba", "texto": "Un desconocido te apunta con el celular grabando justo en medio de la pista, sin ningún disimulo.", "dificultad": 13, "opciones": [
+      { "texto": "Actuar como si no pasara nada", "stat": "astucia" },
+      { "texto": "Exagerar todo para la cámara", "stat": "carisma" },
+      { "texto": "Taparte la cara y salir del cuadro", "stat": "aguante" }
+    ] },
+    { "titulo": "Baile horrible", "texto": "Te agarra un ataque de baile que no tiene absolutamente nada que ver con el ritmo de la canción, y ya te vieron.", "dificultad": 13, "opciones": [
+      { "texto": "Bailarlo con toda la confianza del mundo", "stat": "carisma" },
+      { "texto": "Intentar disimular el paso", "stat": "astucia" }
+    ] },
+    { "titulo": "Se pierde un jugador", "texto": "En medio del quilombo del boliche te separaste del grupo y ya no ves a nadie conocido por ningún lado.", "dificultad": 13, "opciones": [
+      { "texto": "Guiarte por dónde suena más fuerte la música", "stat": "astucia" },
+      { "texto": "Mandar mensajes para ubicarlos", "stat": "suerte" }
+    ] },
+    { "titulo": "Alguien vomita", "texto": "Al lado tuyo, alguien no la banca más y vomita justo en medio de todos, sin ningún tipo de aviso previo.", "dificultad": 13, "opciones": [
+      { "texto": "Hacerte a un lado justo a tiempo", "stat": "aguante" },
+      { "texto": "Ayudarlo disimulando la situación", "stat": "carisma" }
+    ] },
+    { "titulo": "Momento épico", "texto": "De la nada, todo se alinea: la canción, el grupo, el clima. Es de esos momentos que quedan para la anécdota.", "dificultad": 10, "opciones": [
+      { "texto": "Subirte a la ola así como viene", "stat": "suerte" },
+      { "texto": "Empujar el momento para que dure más", "stat": "carisma" }
+    ] },
+    { "titulo": "Caos total de boliche", "texto": "El boliche entero se prende fuego en el mejor sentido posible — o en el peor, todavía no está claro cuál de los dos.", "dificultad": 16, "opciones": [
+      { "texto": "Meterte de lleno en el quilombo", "stat": "aguante" },
+      { "texto": "Tratar de controlar la situación sin arruinar la joda", "stat": "astucia" }
+    ] }
   ],
   "after": [
-    { "titulo": "Casa que no es de nadie", "texto": "Nadie sabe qué se puede tocar. -1 Astucia colectivo." },
-    { "titulo": "El dueño se despierta", "texto": "Elegir: chamuyar (Carisma) o huir (Suerte)." },
-    { "titulo": "Conversación profunda", "texto": "Dos jugadores pueden resolver rivalidades o quedar peor." },
-    { "titulo": "Confesión innecesaria", "texto": "Tirada de Astucia. Éxito: alivio. Fallo: cringe eterno." },
-    { "titulo": "Uno se duerme", "texto": "Queda fuera 1 ronda. Puede perder cosas." },
-    { "titulo": "Se rompe algo importante", "texto": "Consecuencia para el futuro (el DM anota)." },
-    { "titulo": "Discusión heavy", "texto": "Una relación se define para siempre." },
-    { "titulo": "Aparición inesperada", "texto": "Ex, vecino, policía o madre aparece de golpe." },
-    { "titulo": "Resaca anticipada", "texto": "-1 a todas las tiradas finales." }
+    { "titulo": "Casa que no es de nadie", "texto": "Llegan a un depto que no es de ninguno de ustedes y nadie tiene muy claro qué se puede tocar y qué no.", "dificultad": 13, "opciones": [
+      { "texto": "Preguntar antes de tocar cualquier cosa", "stat": "carisma" },
+      { "texto": "Fijarte con cuidado antes de actuar", "stat": "astucia" }
+    ] },
+    { "titulo": "El dueño se despierta", "texto": "En medio de la noche, el dueño del lugar se despierta de golpe y los encuentra ahí, sin ninguna explicación a mano.", "dificultad": 16, "opciones": [
+      { "texto": "Inventar una excusa creíble", "stat": "astucia" },
+      { "texto": "Hacerte el invitado de toda la vida", "stat": "carisma" }
+    ] },
+    { "titulo": "Conversación profunda", "texto": "Se arma una de esas charlas hondas que solo pasan de madrugada, y de repente quedás en el centro de la conversación.", "dificultad": 13, "opciones": [
+      { "texto": "Ser sincero aunque incomode", "stat": "carisma" },
+      { "texto": "Alivianar el tema con humor", "stat": "astucia" }
+    ] },
+    { "titulo": "Confesión innecesaria", "texto": "Sentís las ganas irrefrenables de confesar algo que, pensándolo bien, probablemente era mejor guardarse.", "dificultad": 13, "opciones": [
+      { "texto": "Soltarlo todo de una", "stat": "suerte" },
+      { "texto": "Medir bien las palabras antes de largarlo", "stat": "astucia" }
+    ] },
+    { "titulo": "Uno se duerme", "texto": "El cansancio te empieza a ganar la pulseada y se te cierran los ojos ahí mismo, en medio de todos.", "dificultad": 13, "opciones": [
+      { "texto": "Luchar contra el sueño como se pueda", "stat": "aguante" },
+      { "texto": "Pedirle a alguien que te cuide las cosas", "stat": "carisma" }
+    ] },
+    { "titulo": "Se rompe algo importante", "texto": "En medio del descontrol algo se rompe con un ruido bastante inconfundible, y no hay forma de disimularlo.", "dificultad": 16, "opciones": [
+      { "texto": "Intentar arreglarlo antes de que alguien note", "stat": "astucia" },
+      { "texto": "Buscar a quién echarle la culpa", "stat": "carisma" }
+    ] },
+    { "titulo": "Discusión heavy", "texto": "Se arma una discusión pesada que venía hace rato bajo la alfombra, y ya no da para seguir evitándola.", "dificultad": 13, "opciones": [
+      { "texto": "Plantarte y decir lo que pensás", "stat": "aguante" },
+      { "texto": "Bajar un cambio para que no escale más", "stat": "astucia" }
+    ] },
+    { "titulo": "Aparición inesperada", "texto": "Alguien totalmente inesperado —ex, vecino, policía, madre— aparece de golpe justo en el peor momento posible.", "dificultad": 16, "opciones": [
+      { "texto": "Salir a explicar la situación", "stat": "carisma" },
+      { "texto": "Hacer como si todo estuviera bajo control", "stat": "aguante" }
+    ] },
+    { "titulo": "Resaca anticipada", "texto": "El cuerpo te empieza a pasar factura antes de que termine la noche, y todavía queda un rato largo por delante.", "dificultad": 13, "opciones": [
+      { "texto": "Aguantar el estado como sea", "stat": "aguante" },
+      { "texto": "Buscar algo para bajar un poco el malestar", "stat": "astucia" }
+    ] }
   ]
 }
 ```
@@ -329,7 +468,7 @@ cantidad de dados.
 | NA | Nombre | Efecto |
 |---|---|---|
 | 0-1 | Sobrio | Sin modificador |
-| 2-3 | Alegre | +2 en stats sociales (Carisma, Presencia) |
+| 2-3 | Alegre | +2 en stats sociales (Carisma) |
 | 4-5 | Picante | +4 en stats sociales / -2 en stats lógicas (Astucia) |
 | 6-7 | **Modo Caos** | Se activa el modo caos del personaje (ver `personajes.json`). Sin modificador numérico propio |
 | 8-9 | Irrecuperable | -2 parejo a cualquier stat (reemplaza a la vieja mecánica de "2d6, quedarse con el peor", que dejó de existir porque ahora la tirada siempre es 2d6 fijo) |
@@ -337,22 +476,85 @@ cantidad de dados.
 
 ### 5.5 `data/npcs.json`
 
-"Mazo" de personajes que el DM puede revelar durante la noche. Todo NPC
-tiene un `tipo` que determina cómo se comporta:
+"Mazo" de personajes que el DM puede revelar durante la noche. **Todos los
+NPCs se revelan igual**, con la misma acción y con revelado global: la carta
+llega a todos los jugadores a la vez y el NPC queda como marcador fijo en la
+zona del mapa donde el DM lo puso. `importancia` (`npc` blanco / `importante`
+magenta) solo cambia el color de la carta.
+
+Lo que cambia según el `tipo` es qué se puede hacer **después** del reveal:
 
 - **`"ambiente"`**: decorativo, sin mecánica propia (los 5 que ya
-  estaban). Se revela **a todos los jugadores a la vez** (revelado
-  global, sin turno) y queda como marcador fijo en el mapa. `importancia`
-  (`npc` blanco / `importante` magenta) solo cambia el color de la carta.
+  estaban). Se revela y listo — no admite encuentro.
 - **`"levante"`**: intentar levantarse a alguien. Tiene `puntaje_lindura`
-  (1-10) y `dificultad_chamuyo` (número a superar con la tirada de
-  Carisma). Se revela **dirigido a un único jugador** (el del turno que
-  asignó el DM), no a todos — ver sección 2, fila "Misterio de lindura".
+  (1-10) y `dificultad_chamuyo` (número a superar por ronda, ver más
+  abajo). Una vez revelado, el DM le puede iniciar un encuentro a un
+  jugador puntual (`iniciar_encuentro`, sección 7) — ver sección 2, fila
+  "Misterio de lindura".
 - **`"confrontacion"`**: alguien a quien hay que convencer, pelear o
   sobornar para pasar una situación (patovica, rugbiers borrachos,
-  etc.). Tiene `opciones` (mismo esquema que en `eventos.json`, ver
-  sección 5.8): 2-3 enfoques posibles, cada uno con su stat. También se
-  revela **dirigido a un único jugador**.
+  etc.). Tiene `dificultad` (número a superar por ronda, gana dificultad
+  automática con la misma escala que el resto de la app — sección 8).
+  Igual que el levante, el encuentro se inicia aparte sobre el NPC ya
+  revelado.
+
+Los dos tipos de encuentro (levante y confrontación) se resuelven con el
+**mismo mecanismo de árbol de diálogo** (sección 2, fila "Encare por
+rondas"): en vez de una tirada única, `data/npcs.json` les agrega un campo
+`arbol`:
+
+```json
+"arbol": {
+  "inicio": "ronda_1",
+  "nodos": {
+    "ronda_1": {
+      "texto": "Te mira de reojo, atenta a lo que decís.",
+      "opciones": [
+        { "texto": "Le tirás una frase con toda la soltura", "stat": "carisma",
+          "respuesta": "Se ríe y te sigue el juego.", "siguiente": "ronda_2_soltura" },
+        { "texto": "La hacés reír con algo random", "stat": "carisma",
+          "respuesta": "Levanta una ceja, pero sonríe.", "siguiente": "ronda_2_random" }
+      ]
+    },
+    "ronda_2_soltura": {
+      "texto": "Se acerca un paso, con onda.",
+      "opciones": [
+        { "texto": "Le seguís el clima, tranquilo", "stat": "carisma",
+          "respuesta": "Asiente, cómoda.", "siguiente": null },
+        { "texto": "Subís la apuesta con algo más directo", "stat": "carisma",
+          "respuesta": "Se sorprende, pero no se va.", "siguiente": null }
+      ]
+    },
+    "ronda_2_random": {
+      "texto": "Te sigue la joda, medio incrédula.",
+      "opciones": [
+        { "texto": "Redoblás la apuesta con otro chiste", "stat": "carisma",
+          "respuesta": "Se ríe de nuevo, ya más suelta.", "siguiente": null },
+        { "texto": "Cambiás el tono, más en serio", "stat": "carisma",
+          "respuesta": "Te mira distinto, con más atención.", "siguiente": null }
+      ]
+    }
+  }
+}
+```
+
+(este ejemplo completo es el de `sofia`, 2 rondas, 12 de `dificultad_chamuyo`
+por ronda). `nodos` es un dict `id_nodo → {texto, opciones}`. Cada opción
+tiene `texto` (lo que ve el jugador antes de elegir), `stat` (qué se tira si
+la elige — en levante siempre `"carisma"`, en confrontación varía por
+opción), `respuesta` (lo que el jugador ve después de tirar, antes de pasar
+a la siguiente ronda) y `siguiente` (id del próximo nodo, o `null` si esa
+opción cierra el encuentro ahí — es una hoja del árbol). La profundidad es
+variable por NPC (1 a 3 rondas): con 2 opciones por nodo, profundidad 3 son
+7 nodos, manejable a mano. El jugador solo ve, en cada momento, el nodo
+`actual` (sin `respuesta` ni `siguiente` de las opciones — sería spoiler de
+las ramas futuras); el árbol completo con las respuestas vive únicamente en
+el server.
+
+El **encuentro** es la única parte del juego con turno: es dirigido a un
+único `jugador_objetivo`, solo él ve la carta con las acciones y solo él
+puede tirar. Y solo puede haber **uno sin resolver a la vez en toda la
+partida** (sección 2, "Un encuentro por vez").
 
 `fase` sigue filtrando qué NPCs le aparecen al DM para elegir según la
 fase activa, para los tres tipos.
@@ -419,48 +621,28 @@ Este set de NPCs ambiente es un punto de partida — se puede ampliar con
 más personajes por fase antes de la noche del evento, siempre respetando
 el mismo esquema de campos.
 
-**No se definen acá los NPCs de tipo `levante` ni `confrontacion`** — se
-arman aparte, en particular. La forma que van a tener (sin inventar
-personajes concretos todavía):
+Los 6 NPCs de tipo `levante`/`confrontacion` que se terminaron definiendo
+para el MVP (con su árbol completo a mano) son `sofia`, `el_rulo` y
+`morocho_after` (levante) y `hermano_mayor`, `vecino_6am` y `patovica`
+(confrontación), con profundidades de 1 a 3 rondas repartidas entre los
+seis para que no todos los encuentros se sientan iguales:
 
-```json
-{
-  "id": "<id_unico>",
-  "nombre": "<nombre>",
-  "apodo": "<apodo>",
-  "avatar": "<emoji o, más adelante, imagen/dibujo>",
-  "frase_reveal": "<frase de presentación>",
-  "importancia": "npc",
-  "tipo": "levante",
-  "fase": "boliche",
-  "puntaje_lindura": 7,
-  "dificultad_chamuyo": 12
-}
-```
+| NPC | Fase | Tipo | Rondas | dificultad por ronda |
+|---|---|---|---|---|
+| `morocho_after` | after | levante | 1 | 13 |
+| `sofia` | previa | levante | 2 | 12 |
+| `el_rulo` | boliche | levante | 3 | 14 |
+| `hermano_mayor` | previa | confrontación | 1 | 11 |
+| `vecino_6am` | after | confrontación | 2 | 13 |
+| `patovica` | boliche | confrontación | 3 | 14 |
 
-```json
-{
-  "id": "<id_unico>",
-  "nombre": "<nombre>",
-  "apodo": "<apodo>",
-  "avatar": "<emoji o, más adelante, imagen/dibujo>",
-  "frase_reveal": "<frase de presentación>",
-  "importancia": "importante",
-  "tipo": "confrontacion",
-  "fase": "boliche",
-  "opciones": [
-    { "texto": "Lo tratás de convencer", "stat": "carisma" },
-    { "texto": "Te la jugás y te vas al humo", "stat": "aguante" },
-    { "texto": "Le ofrecés algo", "stat": "suerte" }
-  ]
-}
-```
-
-`dificultad_chamuyo` usa la misma escala que las dificultades de
-referencia recalibradas en la sección 8 (10 fácil, 13 normal, 16 difícil,
-19+ muy difícil) — un `puntaje_lindura` más alto debería, en general, ir
-con una `dificultad_chamuyo` más alta, pero eso lo termina de calibrar
-quien defina el contenido.
+`dificultad_chamuyo`/`dificultad` usan la misma escala que las
+dificultades de referencia recalibradas en la sección 8 (10 fácil, 13
+normal, 16 difícil, 19+ muy difícil), pero como umbral **por ronda**: la
+dificultad final de un encuentro es `dificultad_por_ronda * rondas_jugadas`
+(sección 2, fila "Encare por rondas"), así que un NPC de 3 rondas ya es
+proporcionalmente más difícil sin recalibrar los números de la tabla de
+arriba.
 
 ### 5.6 `data/mapa.json`
 
@@ -550,30 +732,39 @@ la cumple igual). Colores con significado fijo:
 - **Rosa/magenta**: NPCs importantes y cartas nuevas
 - **Amarillo** (`--yellow`): eventos activos
 
-### 5.8 Esquema compartido: `opciones`
+### 5.8 `opciones`: esquema compartido (de nuevo)
 
-Usado en dos lugares — un evento de `data/eventos.json` (sección 5.3) y un
-NPC `tipo: "confrontacion"` de `data/npcs.json` (sección 5.5). Es la misma
-forma en los dos casos, así que se define una sola vez acá:
+*(Hubo una versión intermedia de este plan donde `opciones` de
+`data/eventos.json` no llevaba `stat` propio —todas las opciones de una
+situación tiraban el mismo stat fijo de la situación—. Se volvió atrás a
+pedido explícito: ahora vuelve a ser el mismo esquema en los dos lugares
+donde se usa.)*
+
+Usado en `data/eventos.json` (situaciones, sección 5.3) y en NPCs
+`tipo: "confrontacion"` (`data/npcs.json`, sección 5.5). Cada opción trae
+su propio `stat`, porque cada enfoque es mecánicamente distinto:
 
 ```json
 "opciones": [
   { "texto": "Lo tratás de chamuyar", "stat": "carisma" },
   { "texto": "Lo coimeás", "stat": "suerte" },
-  { "texto": "Lo apurás", "stat": "presencia" }
+  { "texto": "Lo apurás", "stat": "aguante" }
 ]
 ```
 
-Cada opción es texto + un `stat` de los 5 existentes (`carisma`,
-`aguante`, `astucia`, `presencia`, `suerte`). El jugador elige una opción
-en su celu; el server tira `2d6 + stat_elegido + modificador_na` igual que
-cualquier otra tirada (sección 8) — no es un mecanismo nuevo, es
-`tirar_dado` con el stat ya decidido de antemano por la elección en vez de
-que el jugador lo elija directo. No lleva dificultad propia por opción:
-la dificultad de referencia general (sección 8) sigue siendo la que el DM
-dice en voz alta, y sigue siendo el DM quien decide la consecuencia
-narrativa del resultado — elegir una opción solo fija qué stat se tira, no
-automatiza qué pasa después.
+El jugador elige una opción en su celu; el server tira `2d6 +
+stat_efectivo(stat_elegido) + modificador_na` igual que cualquier otra
+tirada (sección 8) — es la mecánica de siempre con el stat ya decidido de
+antemano por la elección en vez de que el jugador lo elija directo. La
+`dificultad` no vive en la opción: para NPCs de confrontación sigue
+siendo la que el DM dice en voz alta; para situaciones es el campo
+`dificultad` de la situación entera (sección 5.3), la misma sin importar
+qué opción se haya elegido.
+
+**Solo las situaciones** (no los NPCs de confrontación) tienen además la
+opción implícita **"Otro (decide DM)"**, que no está en el JSON — la
+agrega el cliente siempre, con los 4 stats jugables para elegir. Ver el
+detalle en 5.3 y el mensaje `intentar_situacion` en la sección 7.
 
 ---
 
@@ -589,20 +780,30 @@ game_state = {
             "na": 0,
             "modo_caos_activo": False,
             "prendas_activas": [],       # lista de ids de prendas.json
-            "habilidad_usada_fase": False,
-            "habilidad_usada_noche": False,
+            "debilidad_activa": False,   # la activa/desactiva el DM a mano, el jugador no puede
             "zona_actual": "entrada",    # id de zona de la variante de mapa activa (mapa_actual)
+            "puntaje": 0,                # +1 situación, +1 confrontación, +puntaje_lindura levante, 0 en fracaso
+            "historial": [],             # [{"tipo": "levante"|"confrontacion"|"situacion", "nombre": "...", "exito": bool, "puntos": int}, ...]
         }
     },
     "mapa_actual": { "id": "boliche_a", "nombre": "Boliche A", "zonas": [...] },  # variante de data/mapa.json en uso, ver sección 5.6
     "npcs_revelados": {
         # "<npc_id>": {
-        #     "zona": "barra",
-        #     "jugador_objetivo": None,   # player_id, solo para tipo "levante"/"confrontacion"
-        #     "resuelto": False,          # True una vez que el jugador_objetivo tiró el intento
+        #     "zona": "barra",     # siempre: el reveal es global y todo NPC va al mapa
+        #     "encuentro": None,   # o el encuentro dirigido que tiene encima, solo para
+        #                          # tipo "levante"/"confrontacion":
+        #                          # {
+        #                          #     "jugador_objetivo": "<player_id>",
+        #                          #     "resuelto": False,
+        #                          #     "nodo_actual": "ronda_1",  # id de nodo en npc["arbol"]["nodos"]
+        #                          #     "acumulado": 0,            # suma de "total" de cada ronda tirada
+        #                          #     "rondas_jugadas": 0,
+        #                          #     "tiradas": [],             # resultado completo de dice.tirar() por ronda
+        #                          # }
         # }
     },
-    "situacion_actual": None,  # el evento activo de eventos.json (dict completo) o None
+    "situacion_actual": None,  # copia del evento activo + estado de resolución (dict) o None:
+    # {**evento, "resuelta": False, "resuelta_por": None, "exito": None, "opcion_elegida": None}
     "eventos_usados": {
         "previa": [], "boliche": [], "after": []  # títulos ya mostrados, por fase — para no repetir en modo aleatorio
     },
@@ -616,10 +817,15 @@ propios de la escena/mapa en el que aparecieron, no persisten a la fase o
 variante siguiente. `eventos_usados` **no** se reinicia al avanzar/retroceder
 de fase — se arma una sola vez en `estado_inicial()` y se va acumulando
 durante toda la partida, para que "🎲 Aleatoria" nunca repita un evento ya
-mostrado en esa fase, ni yendo y viniendo entre fases. `zona` en `npcs_revelados` solo aplica a
-NPCs "ambiente" (los de tipo "levante"/"confrontacion" no necesitan posición
-en el mapa, son un encuentro directo con un jugador, no un marcador
-ambiental). Cambiar de mapa (por fase o con `cambiar_mapa`) también resetea
+mostrado en esa fase, ni yendo y viniendo entre fases. `zona` en
+`npcs_revelados` aplica a **todos** los tipos de NPC, porque todos se revelan
+igual y todos quedan como marcador en el mapa; `encuentro` es lo único que
+distingue a levante/confrontación, y arranca en `None` hasta que el DM lo
+inicia. *(Antes `zona` era exclusiva de los NPCs "ambiente" y los de encuentro
+no tenían posición en el mapa: eso cambió con el reveal unificado.)* Sacar un
+NPC de escena (`ocultar_npc`) se lleva puesto su encuentro; expulsar a un
+jugador limpia el encuentro que tenga encima pero deja al NPC revelado.
+Cambiar de mapa (por fase o con `cambiar_mapa`) también resetea
 la `zona_actual` de todos los jugadores a la primera zona de la variante
 nueva, ya que las zonas de una variante distinta pueden no tener nada en
 común con las de la anterior.
@@ -634,16 +840,21 @@ Body: `{ "nombre": str, "personaje_id": str }` → devuelve `player_id` y arma l
 
 ### `WS /ws/player/{player_id}`
 Mensajes que el jugador puede enviar:
-- `{"type": "tirar_dado", "stat": "carisma", "contexto": "Lo coimeás"}` → server tira 2d6, los suma, aplica modificador de NA (ver sección 5.4/8), devuelve resultado a ese jugador y lo loguea para el DM. `contexto` es **opcional**: si el jugador eligió una `opción` de la situación activa (sección 5.8), se manda el texto de esa opción solo para que el log del DM sea legible ("Facu intentó coimear (Suerte)" en vez de "Facu tiró Suerte"); no cambia la mecánica de la tirada en nada.
-- `{"type": "usar_habilidad"}` → marca habilidad usada, devuelve texto de la habilidad.
-- `{"type": "resolver_prenda", "prenda_id": 7}` → saca esa prenda de sus `prendas_activas`. Nota: originalmente esta sección solo listaba `resolver_prenda` como mensaje del DM (ver `WS /ws/dm` más abajo), pero el milestone 5 pide explícitamente un botón de "resolver" en la pantalla del jugador — se agrega acá para que el jugador pueda resolverla él mismo, sin depender de que el DM lo haga por él. Las dos vías (DM o jugador) llaman a la misma mutación en `game_state.py` y quedan habilitadas
-- `{"type": "intentar_levante", "npc_id": "..."}` → solo válido si `npcs_revelados[npc_id]["jugador_objetivo"]` es este jugador. Tira Carisma vs `dificultad_chamuyo` del NPC (2d6 + Carisma + modificador_na vs el número), marca el NPC como `resuelto` y devuelve `resultado_levante` con el `puntaje_lindura` real, sin importar el NA que tenga en ese momento (el misterio ya cumplió su función al revelarse la carta, no en el resultado)
-- `{"type": "intentar_confrontacion", "npc_id": "...", "stat": "aguante"}` → solo válido si es el `jugador_objetivo` y `stat` es uno de los listados en `opciones` del NPC. Tira ese stat contra la dificultad de referencia que el DM diga en voz alta (sección 8) — la consecuencia la sigue aplicando el DM a mano (NA, prenda), como con cualquier otra tirada
+- `{"type": "tirar_dado", "stat": "carisma", "contexto": "Lo coimeás"}` → tirada libre, sin relación con la situación activa: server tira 2d6, los suma, aplica modificador de NA y de `debilidad_activa` si corresponde (`stat_efectivo`, ver más abajo), devuelve resultado a ese jugador y lo loguea para el DM. `contexto` es opcional, solo para que el log del DM sea legible. Sigue siendo el mecanismo para cualquier tirada que el DM pida "en voz alta" sin que haya una situación de por medio.
+- `{"type": "intentar_situacion", "opcion": "Abrir la heladera para revisar", "stat": "astucia"}` → solo válido si hay una `situacion_actual` sin `resuelta`, y si `stat` es el que corresponde a esa `opcion` según `situacion.opciones` (o cualquiera de los 4 stats jugables cuando `opcion` es `"Otro (decide DM)"`, sección 5.3/5.8). Tira `stat` contra la `dificultad` de la situación (2d6 + `stat_efectivo` + modificador_na vs el número), marca la situación como `resuelta` (con `resuelta_por`, `exito` y `opcion_elegida`) y devuelve `resultado_situacion` a **ese** jugador con el detalle de la tirada. Como la situación queda cerrada, el server también hace un broadcast de `estado` a **todos** los jugadores para que vean que ya se resolvió (y quién la resolvió), y registra la tirada en `log_eventos` (`registrar_tirada`, con el título de la situación + la opción como `contexto`) para que aparezca en el historial del DM igual que cualquier otra tirada
+- `{"type": "intentar_encare", "npc_id": "...", "opcion_idx": 0, "stat_otro": null}` → un solo mensaje para levante y confrontación, reemplaza a `intentar_levante`/`intentar_confrontacion`. Solo válido si `npcs_revelados[npc_id]["encuentro"]["jugador_objetivo"]` es este jugador y el encuentro no está `resuelto`. Con `opcion_idx`: busca esa opción en `npc["arbol"]["nodos"][encuentro["nodo_actual"]]["opciones"]` (error si está fuera de rango) y usa su `stat`/`respuesta`/`siguiente`. Con `stat_otro` en vez de `opcion_idx` (rama "Otro (el DM decide)", sección 2): tira ese stat directo, sin `respuesta` (la narra el DM en voz alta) y cierra el encuentro ahí mismo, cualquiera sea la ronda. Tira `stat` (2d6 + `stat_efectivo` + modificador_na), suma el `total` al `acumulado` del encuentro y suma 1 a `rondas_jugadas`. Si la opción elegida (o `stat_otro`) tiene `siguiente` nulo, ahí se resuelve todo el encuentro: `dificultad_total = dificultad_por_ronda * rondas_jugadas`, `exito = acumulado >= dificultad_total`, se marca `resuelto` y se registra el resultado en el `puntaje`/`historial` del jugador (sección 2, fila "Puntaje total de la noche"). Si tiene `siguiente`, el encuentro sigue abierto en el nodo próximo y todavía no se toca el puntaje
+- `{"type": "hablar_con_npc", "npc_id": "..."}` → segunda vía para arrancar un encuentro, además de que lo asigne el DM (`iniciar_encuentro`, ver `WS /ws/dm`): cuando un jugador toca "Hablar" en la carta de reveal de un NPC `"levante"`/`"confrontacion"`, el propio cliente llama a `iniciar_encuentro(npc_id, jugador_objetivo=<quien tocó>)` — mismas validaciones y mismo bloqueo global que la vía del DM (error si el NPC no está revelado, es de ambiente, o ya hay otro encuentro sin resolver). Para NPCs `"ambiente"` "Hablar" sigue sin mandar este mensaje — la carta se cierra local nomás, sin mecánica, como siempre
+
+`stat_efectivo(jugador, personaje, stat)` (en `game_state.py`) es el punto único donde se suma el `modificador` de la `debilidad` del personaje al `stat_valor` que recibe `dice.tirar`, cuando `jugador["debilidad_activa"]` es `True` y el `stat` tirado coincide con el de la debilidad — lo usan las tres rutas de tirada de arriba, así el efecto es real (no solo un texto de referencia para el DM) sin que `dice.py` deje de ser una función pura sin conocimiento de personajes (regla 2 de `CLAUDE.md`).
+
+**`resolver_prenda` ya no es un mensaje que el jugador pueda enviar** — se sacó a pedido explícito: ahora solo el DM puede marcar una prenda como resuelta (ver `WS /ws/dm` más abajo). El jugador sigue viendo sus prendas activas en pantalla, pero sin botón para resolverlas él mismo.
 
 Mensajes que el jugador recibe (push del server):
-- `{"type": "estado", "na": 2, "prendas": [...], "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}, "situacion_actual": {...} | null, "mapa_actual": {"id": "boliche_a", "nombre": "Boliche A", "zonas": [...]}, "jugadores_en_mapa": [...]}` (cada vez que cambia algo suyo, el mapa o la situación activa de la fase; `mapa_actual` trae la variante de mapa completa —con nombre y zonas ya resueltas— para no depender de que el cliente tenga cacheado `data/mapa.json`; `situacion_actual` trae el evento completo, con `opciones` si las tiene)
-- `{"type": "npc_revelado", "npc": {...}, "zona": "barra" | null}` — NPCs `"ambiente"` llegan por broadcast a **todos** los jugadores, como antes. NPCs `"levante"`/`"confrontacion"` llegan **solo al `jugador_objetivo`** (mensaje dirigido, no broadcast); para `"levante"`, si el NA de ese jugador en el momento del reveal es alto (ver sección 2, "Misterio de lindura"), el objeto `npc` llega sin `nombre`/`avatar`/`puntaje_lindura` reales — reemplazados por placeholders de misterio (`"❓"`, `"Alguien"`) que el frontend muestra tal cual
-- `{"type": "resultado_levante", "npc_id": "...", "exito": true, "puntaje_lindura": 7, "dado_total": 14}` → push al `jugador_objetivo` al resolver el intento, siempre con el dato real ya revelado
+- `{"type": "estado", "na": 2, "prendas": [...], "debilidad_activa": false, "fase": "boliche", "zona_actual": "barra", "npcs_revelados": {...}, "situacion_actual": {...} | null, "mapa_actual": {"id": "boliche_a", "nombre": "Boliche A", "zonas": [...]}, "jugadores_en_mapa": [...], "puntaje": 4, "historial": [...]}` (cada vez que cambia algo suyo, el mapa o la situación activa de la fase; `mapa_actual` trae la variante de mapa completa —con nombre y zonas ya resueltas— para no depender de que el cliente tenga cacheado `data/mapa.json`; `situacion_actual` trae la situación completa —título, texto, stat, dificultad, opciones— más su estado de resolución: `resuelta`, `resuelta_por`, `exito`; `debilidad_activa` es el booleano que dispara la tarjeta de debilidad en pantalla, con el contenido —`nombre`, `descripcion`, `stat`, `modificador`— sacado de `data/personajes.json`, que el cliente ya tiene cacheado; `puntaje`/`historial` son los del propio jugador, sección 2 fila "Puntaje total de la noche"). `npcs_revelados` llega como `{"<npc_id>": {"zona": "...", "encuentro": null | {...}}}`: la **existencia** del NPC y su `zona` son iguales para todos (revelado global), y lo único filtrado por jugador es `encuentro` — solo el `jugador_objetivo` lo recibe distinto de `null`, así el resto ni se entera de con quién está el encuentro en curso. Cuando llega, el `encuentro` trae además `npc` (el objeto del NPC sin su `arbol` completo —eso sería spoiler—, ya filtrado por el misterio de lindura si corresponde) y, mientras no esté `resuelto`, `nodo` (el nodo actual del árbol, con `texto` y `opciones` recortadas a `texto`/`stat` únicamente, sin `respuesta` ni `siguiente` de ninguna opción). Al reconectarse, el jugador recupera su encuentro pendiente por esta vía sin necesidad de un mensaje aparte
+- `{"type": "npc_revelado", "npc": {...}, "zona": "barra"}` — broadcast a **todos** los jugadores, para cualquier `tipo` de NPC. Es puramente cosmético: la carta trae nombre, apodo, avatar y `frase_reveal`; para `"ambiente"` sus botones ("Hablar"/"Ignorar") solo la cierran, para `"levante"`/`"confrontacion"` "Hablar" además dispara `hablar_con_npc` (ver `WS /ws/player/{player_id}` más arriba)
+- `{"type": "ocultar_carta_npc", "npc_id": "..."}` — broadcast a **todos** los jugadores en cuanto un encuentro arranca sobre ese NPC (sea porque alguien tocó "Hablar" o porque lo asignó el DM): la carta de reveal de ese NPC ya no tiene sentido en pantalla — quien la esté viendo la cierra sola, así no queda gente tratando de arrancar un encuentro que ya empezó con otro jugador
+- `{"type": "resultado_encare", "resuelto": false, "npc_id": "...", "stat": "carisma", "respuesta": "...", "siguiente_nodo": {"texto": "...", "opciones": [...]}, "dados_tirados": [4, 5], "total": 13, ...}` → push al `jugador_objetivo` después de cada ronda que **no** cierra el encuentro: trae la `respuesta` de la opción elegida y el `siguiente_nodo` para que el cliente re-renderice el overlay sin cerrarlo. Cuando la ronda **sí** cierra el encuentro (hoja del árbol u "Otro"), en cambio llega `{"type": "resultado_encare", "resuelto": true, "npc_id": "...", "stat": "...", "exito": true, "acumulado": 25, "dificultad_total": 24, "respuesta": "..." | null, "puntaje_lindura": 7, ...}` (con `puntaje_lindura` solo si es un NPC de levante), con el dato real del NPC ya revelado sin importar el NA que tuviera al arrancar el encuentro
+- `{"type": "resultado_situacion", "stat": "astucia", "dificultad": 13, "exito": true, "dados_tirados": [4, 5], "total": 15, ...}` → push solo al jugador que intentó la situación, con el detalle completo de la tirada (mismo formato que `resultado_tirada`, más `exito` y `dificultad`)
 - `{"type": "narracion", "texto": "..."}` (cuando el DM dispara narración IA)
 
 ### `WS /ws/dm`
@@ -652,17 +863,18 @@ Mensajes que el DM puede enviar:
 - `{"type": "retroceder_fase"}` → la inversa de `avanzar_fase` (after → boliche → previa), no hace nada si ya está en "previa". Comparte la misma lógica de "entrar a una fase" que `avanzar_fase` (mapa al azar, reset de `npcs_revelados`/`situacion_actual`/zonas), salvo que nunca aplica el reset de NA de Leyenda Urbana — eso es específico de *entrar* al After
 - `{"type": "cambiar_mapa", "mapa_id": "depto_banana"}` (o `"mapa_id": null` / campo ausente para elegir una variante al azar de la fase activa) → cambia `mapa_actual` sin tocar la fase; resetea `npcs_revelados` y las `zona_actual` de los jugadores igual que un cambio de fase. Responde `{"type": "error", "detail": "..."}` si `mapa_id` no es una variante válida para la fase activa
 - `{"type": "ajustar_na", "player_id": "...", "delta": 1}`
+- `{"type": "activar_debilidad", "player_id": "..."}` / `{"type": "desactivar_debilidad", "player_id": "..."}` → prende/apaga `debilidad_activa` de ese jugador. Es el **único** mecanismo para activarla o desactivarla — el jugador no tiene mensaje propio para esto
 - `{"type": "repartir_prenda", "player_id": "...", "prenda_id": 7}` (o `null` para random del mazo)
-- `{"type": "resolver_prenda", "player_id": "...", "prenda_id": 7}`
+- `{"type": "resolver_prenda", "player_id": "...", "prenda_id": 7}` → ahora es **la única vía** para resolver una prenda (antes también existía del lado del jugador, sección `WS /ws/player/{player_id}`; se sacó a pedido explícito)
 - `{"type": "mover_jugador", "player_id": "...", "zona": "barra"}` → cambia `zona_actual` de ese jugador (debe ser una zona válida del `mapa_actual`)
-- `{"type": "revelar_npc", "npc_id": "martina", "zona": "barra"}` (NPC ambiente, sin cambios) o `{"type": "revelar_npc", "modo": "random"}` (elige uno no revelado todavía de la fase activa) → agrega el NPC a `npcs_revelados`, dispara `npc_revelado` a todos los jugadores
-- `{"type": "revelar_npc_encuentro", "npc_id": "...", "jugador_objetivo": "...", "modo": "random"|"elegir"}` → para NPCs `"levante"`/`"confrontacion"`: agrega el NPC a `npcs_revelados` con ese `jugador_objetivo`, dispara `npc_revelado` **solo a ese jugador** (no broadcast). Con `"modo": "random"` el server elige el NPC entre los **disponibles** de tipo levante/confrontación de la fase activa; con `"elegir"` se manda también `npc_id`. Un NPC de encuentro **no se agota al usarse**: una vez que su encuentro queda `resuelto` (el jugador ya tiró), vuelve a estar disponible para asignárselo a otro jugador (o al mismo) más adelante en la misma fase — tiene sentido narrativo, un mismo personaje puede cruzarse con más de uno en la noche. Lo único que lo bloquea es tener un encuentro **sin resolver** en curso con otro jugador; en ese caso `"elegir"` devuelve error y `"random"` no lo ofrece como candidato
-- `{"type": "ocultar_npc", "npc_id": "martina"}` → saca al NPC de `npcs_revelados` (para corregir un error del DM, no una mecánica de juego)
-- `{"type": "siguiente_situacion", "modo": "random"}` o `{"type": "siguiente_situacion", "modo": "elegir", "titulo": "DNI dudoso"}` → fija `situacion_actual` a ese evento de `eventos.json` (filtrado por fase activa), lo agrega a `eventos_usados[fase]`, y lo empuja a todos los jugadores dentro de su próximo `estado`
+- `{"type": "revelar_npc", "npc_id": "martina", "zona": "barra"}` → **único mensaje de revelado, para cualquier `tipo` de NPC**: lo agrega a `npcs_revelados` con esa `zona` y `encuentro: None`, y dispara `npc_revelado` a **todos** los jugadores. Revelar de nuevo un NPC ya revelado lo mueve de zona sin perder el encuentro que tenga encima. *(Reemplaza al par `revelar_npc` + `revelar_npc_encuentro` del esquema anterior, donde revelar un NPC de levante/confrontación disparaba el encuentro en la misma acción.)*
+- `{"type": "iniciar_encuentro", "npc_id": "...", "jugador_objetivo": "..."}` → segundo paso, sobre un NPC **ya revelado** de tipo `"levante"`/`"confrontacion"`: le pone el `encuentro` encima, arrancando del nodo `inicio` de su `arbol` (`{"jugador_objetivo", "resuelto": False, "nodo_actual": npc["arbol"]["inicio"], "acumulado": 0, "rondas_jugadas": 0, "tiradas": []}`, sección 6). Con `"npc_id": null` el server elige al azar entre los NPCs revelados que admitan encuentro. Devuelve `{"type": "error", "detail": "..."}` si el NPC no está revelado todavía, si es de ambiente, o si **ya hay otro encuentro sin resolver** en la partida (bloqueo global, sección 2). Un NPC de encuentro **no se agota**: una vez `resuelto`, se le puede iniciar otro al mismo jugador o a otro, arrancando de nuevo desde el nodo `inicio`. El encuentro no manda un mensaje propio al jugador — viaja dentro de su `estado` (ver más abajo)
+- `{"type": "ocultar_npc", "npc_id": "martina"}` → saca al NPC de `npcs_revelados` y, con él, cualquier encuentro suyo (para corregir un error del DM, o para destrabar un encuentro que quedó colgado — no es una mecánica de juego)
+- `{"type": "siguiente_situacion", "modo": "random"}` o `{"type": "siguiente_situacion", "modo": "elegir", "titulo": "DNI dudoso"}` → fija `situacion_actual` a una copia de ese evento de `eventos.json` (filtrado por fase activa) con estado de resolución en `False`/`None`, lo agrega a `eventos_usados[fase]`, y lo empuja a todos los jugadores dentro de su próximo `estado`. Reemplaza cualquier situación anterior, esté resuelta o no
 - `{"type": "narrar_ia", "prompt_extra": "el Intenso acaba de fallar una tirada de Carisma feo"}` → server arma el prompt con contexto (fase actual, jugador, evento) y llama a Ollama
 
 Mensajes que el DM recibe (push del server):
-- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "situacion_actual": {...} | null, "log_eventos": [...], "mapa_actual": {"id": "...", "nombre": "...", "zonas": [...]}}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs). El DM siempre ve el `npc` completo en `npcs_revelados` (sin el misterio — el misterio es solo del lado del jugador que no debe saber)
+- `{"type": "estado_completo", "jugadores": {...}, "fase": "...", "npcs_revelados": {...}, "situacion_actual": {...} | null, "log_eventos": [...], "mapa_actual": {"id": "...", "nombre": "...", "zonas": [...]}}` (broadcast completo cada vez que algo cambia — para un MVP de 6 jugadores esto es más simple y confiable que mandar diffs). El DM siempre ve el `npc` completo en `npcs_revelados` (sin el misterio — el misterio es solo del lado del jugador que no debe saber), incluido el `arbol` entero. `jugadores` ya trae `puntaje`/`historial` de cada uno (sección 6), con lo que arma el ranking de la tab "🏆 Puntaje". `encuentro` trae `rondas_jugadas`, que el panel usa para mostrar en qué ronda está el jugador en el banner de "encuentro en curso" sin tener que preguntarle al DM. `log_eventos` recibe **una sola entrada por encuentro resuelto** (`registrar_tirada`, disparado desde `intentar_encare` solo cuando `resuelto` da `true`), no una por ronda
 
 ---
 
@@ -781,8 +993,9 @@ Ir en este orden — cada milestone es jugable/testeable antes de pasar al sigui
 8. **Mapa por fase:** `/dm` muestra las zonas de la fase activa (`data/mapa.json`) con los jugadores ubicados en su `zona_actual`. El DM puede mover un jugador de zona con un click/dropdown. En `/jugador`, un botón "🗺️ ¿Qué está pasando?" abre el mapa simplificado (mismas zonas, mismos jugadores) — todavía sin NPCs.
 9. **Cartas de NPC:** el DM elige un NPC del mazo de la fase (`data/npcs.json`) y lo revela en una zona. Aparece como marcador en el mapa del DM y como carta (nombre, apodo, avatar, frase) en el celu de todos los jugadores a la vez, con botones "Hablar"/"Ignorar" que solo cierran la carta. Aplicar acá la estética neon boliche de la sección 5.7 a las pantallas de mapa y carta.
 10. **Situación actual con opciones:** en `/dm`, reemplazar la lista estática de eventos del milestone 6 por un picker de "situación actual" — botón "🎲 Aleatoria" (no repetida en la fase) o elegir una puntual de la lista, con `eventos_usados` llevando la cuenta. La situación activa se empuja a todos los jugadores. Si el evento tiene `opciones` (sección 5.8), el jugador ve esas opciones en vez de sus 5 stats libres y al elegir una dispara `tirar_dado` con el stat correspondiente; si no tiene `opciones`, se comporta como hoy.
-11. **Encuentros de NPC por turnos (levante/confrontación):** `data/npcs.json` gana los tipos `"levante"` y `"confrontacion"` (sección 5.5). El DM asigna el encuentro a un jugador específico (random o elegido) — llega dirigido solo a ese jugador, no a todos. Levante: tirada de Carisma vs `dificultad_chamuyo`, con el `puntaje_lindura` oculto si el jugador tiene NA alto (misterio, sección 2) y revelado siempre al resolver. Confrontación: el jugador elige una opción de enfoque (pelear/convencer/sobornar) igual que en el milestone 10. El contenido real de estos NPCs (quiénes son, sus dificultades) se define aparte — este milestone es la mecánica, no el contenido.
+11. **Encuentros de NPC por turnos (levante/confrontación):** `data/npcs.json` gana los tipos `"levante"` y `"confrontacion"` (sección 5.5). El NPC se revela como cualquier otro (global, todos lo ven en el mapa) y **después**, en un paso aparte, el DM le asigna el encuentro a un jugador específico — la carta con las acciones llega dirigida solo a ese jugador, no a todos, y no puede haber más de un encuentro sin resolver a la vez en toda la partida (sección 2). El `puntaje_lindura` del levante llega oculto si el jugador tiene NA alto (misterio, sección 2) y revelado siempre al resolver.
 12. **Ollama:** botón "Narrar con IA" en el panel del DM, con un campo de texto libre para dar contexto extra, muestra el resultado y lo puede broadcastear a todos o solo leerlo él.
+13. **Encare por rondas (árbol de decisiones) y puntaje total:** reemplaza la tirada única de levante/confrontación del milestone 11 por el árbol de diálogo de 1 a 3 rondas de la sección 2 ("Encare por rondas") y 5.5 — cada ronda tira y acumula, recién se resuelve en una hoja del árbol o cuando el DM corta con "Otro (el DM decide)" (mismo patrón que el "Otro" de situaciones). Se agrega también el sistema de puntaje total por jugador (sección 2, "Puntaje total de la noche"), con su ranking en el panel del DM y su historial del lado del jugador. `intentar_levante`/`intentar_confrontacion` (una tirada, un resultado) quedan reemplazados por `intentar_encare` (sección 7), que camina el árbol para los dos tipos.
 13. **Pulido:** aplicar los design tokens de la sección 5.7 (fondo oscuro, acentos cian/rosa/violeta) al resto de `/dm` y `/jugador` que quedó con el estilo básico de los primeros milestones, manteniendo mobile-first en `/jugador` (esto lo van a mirar todos en el celu con poca luz y varios tragos encima — tipografía grande, botones grandes, alto contraste).
 
 No paralelizar estos pasos — cada uno depende del anterior y es mejor

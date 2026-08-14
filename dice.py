@@ -1,6 +1,6 @@
 import random
 
-SOCIALES = {"carisma", "presencia"}
+SOCIALES = {"carisma"}
 LOGICAS = {"astucia"}
 
 

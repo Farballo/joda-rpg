@@ -1,34 +1,243 @@
 {
   "previa": [
-    { "titulo": "¿Quién trae alcohol?", "texto": "Un jugador se ofrece (tira Astucia o Suerte) o hay tirada grupal de Suerte. Éxito: hay alcohol suficiente. Fallo: falta alcohol, alguien arranca con +1 NA de bronca o prenda." },
-    { "titulo": "Estado del depto", "texto": "Tirada de Astucia o Presencia. Éxito: +1 a la primera tirada social del boliche. Fallo: quilombo (falta hielo, baño inutilizable), prenda física temprana." },
-    { "titulo": "Las minas, ¿llegan?", "texto": "Tirada de Carisma o Suerte. Éxito: llegan, sube el clima, +1 NA para todos. Fallo: no llegan, alguien toma de más." },
-    { "titulo": "Primer papelón", "texto": "El jugador más pasado tira Carisma. Éxito: anécdota graciosa. Fallo: prenda inmediata. 1 natural: papelón legendario." },
-    { "titulo": "Decidir cuándo salir", "texto": "Tirada grupal de Astucia. Éxito: salen en el momento justo. Fallo: salen tarde, temprano, o alguien se queda atrás." }
+    {
+      "titulo": "¿Quién trae alcohol?",
+      "texto": "Entrás al departamento, mirás la mesa y no hay ni una botella de agua. En ese momento dudás que alguien se haya hecho cargo de comprar para tomar.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Preguntar si alguien compró", "stat": "astucia" },
+        { "texto": "Abrir la heladera para revisar", "stat": "suerte" }
+      ]
+    },
+    {
+      "titulo": "Estado del depto",
+      "texto": "Faltan minutos para que empiecen a llegar y todavía no está claro si el lugar aguanta la previa: hielo, vasos, y un baño que funcione.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Organizar rápido antes de que lleguen todos", "stat": "astucia" },
+        { "texto": "Repartir tareas entre los que están", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Las minas, ¿llegan?",
+      "texto": "El grupo de la otra previa todavía no confirmó y el clima empieza a bajar un poco. Alguien tiene que hacer algo para que se sumen.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Mandarles un mensaje con onda", "stat": "carisma" },
+        { "texto": "Llamarlas para insistir un poco", "stat": "suerte" }
+      ]
+    },
+    {
+      "titulo": "Primer papelón",
+      "texto": "El que ya está más pasado de la cuenta se resbala con algo — un comentario, un paso en falso, un vaso volcado — y todas las miradas van para ahí.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Reírte de vos mismo antes que los demás", "stat": "carisma" },
+        { "texto": "Disimular como si no hubiera pasado nada", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Decidir cuándo salir",
+      "texto": "Ya es tarde, todos están con ganas, pero nadie se decide a cortar la previa y arrancar para el boliche.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Proponer salir ya", "stat": "carisma" },
+        { "texto": "Calcular los tiempos antes de decidir", "stat": "astucia" }
+      ]
+    }
   ],
   "boliche": [
-    { "titulo": "Patova con ganas de romper las bolas", "texto": "Un jugador tira Carisma. Éxito: pasa. Fallo: -1 Carisma toda la noche." },
-    { "titulo": "DNI dudoso", "texto": "Tirada de Suerte. Éxito: zafa. Fallo: prenda inmediata o espera afuera." },
-    { "titulo": "Tragos carísimos", "texto": "El grupo elige: pagar (nada) o ratonear (-1 Carisma colectivo)." },
-    { "titulo": "Shot de regalo sospechoso", "texto": "Quien lo toma: +1 NA, tira 1d6. 1-2: penalización. 5-6: buff inesperado." },
-    { "titulo": "Empujón fuerte", "texto": "Dos jugadores tiran Carisma o Aguante. El que pierde: +1 NA o prenda." },
-    { "titulo": "Música de mierda", "texto": "Todos -1 Carisma. El Payaso puede anularlo automáticamente." },
-    { "titulo": "Alguien los graba", "texto": "Elegir: actuar normal (difícil), exagerar (riesgo alto) o esconderse (-1 Carisma)." },
-    { "titulo": "Baile horrible", "texto": "Si se rolea con confianza: +1 Carisma. Si no: -1 Carisma y +1 NA." },
-    { "titulo": "Se pierde un jugador", "texto": "Ese jugador juega solo 1 ronda. Si falla una tirada: +1 NA automático." },
-    { "titulo": "Alguien vomita", "texto": "Ese jugador entra en Modo Caos inmediato. Los cercanos tiran Suerte o reciben penalización social." },
-    { "titulo": "Momento épico", "texto": "Algo sale increíblemente bien. El grupo elige: buff colectivo, cancelar una prenda, o bajar NA a uno." },
-    { "titulo": "Caos total de boliche", "texto": "Todos +1 NA. Se activa una prenda random. El DM describe algo que va a traer consecuencias en el after." }
+    {
+      "titulo": "Patova con ganas de romper las bolas",
+      "texto": "En la puerta, el patovica te mira de arriba a abajo con cara de pocos amigos. Parece que hoy decidió complicarle la entrada a todo el mundo.",
+      "dificultad": 16,
+      "opciones": [
+        { "texto": "Hacerte el piola y charlar", "stat": "carisma" },
+        { "texto": "Mostrar que sos conocido del lugar", "stat": "suerte" }
+      ]
+    },
+    {
+      "titulo": "DNI dudoso",
+      "texto": "Se lo das al de seguridad y lo mira más tiempo del necesario, comparando la foto con tu cara como si algo no le cerrara.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Entregarlo con total normalidad", "stat": "suerte" },
+        { "texto": "Distraerlo con un comentario", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Tragos carísimos",
+      "texto": "Llegás a la barra y ves los precios: una fortuna por trago. El barman espera tu pedido con cara de que no va a regalar nada.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Pedir un descuento por grupo", "stat": "carisma" },
+        { "texto": "Buscar alguna promo o 2x1", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Shot de regalo sospechoso",
+      "texto": "Alguien te acerca un shot de un color que no existe en la naturaleza. \"Invita la casa\", dice, sin dar más detalles.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Tomarlo de un trago sin preguntar", "stat": "aguante" },
+        { "texto": "Olerlo primero antes de decidir", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Empujón fuerte",
+      "texto": "En medio de la pista alguien te choca fuerte sin querer y por un segundo perdés el equilibrio en pleno movimiento.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Recuperar el equilibrio al toque", "stat": "aguante" },
+        { "texto": "Devolver el empujón como si nada", "stat": "suerte" }
+      ]
+    },
+    {
+      "titulo": "Música de mierda",
+      "texto": "El DJ pone un tema que nadie banca y en un segundo el clima de la pista se cae en picada.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Pedirle al DJ que cambie el tema", "stat": "carisma" },
+        { "texto": "Arrancar a bailar igual para arrastrar al resto", "stat": "aguante" }
+      ]
+    },
+    {
+      "titulo": "Alguien los graba",
+      "texto": "Un desconocido te apunta con el celular grabando justo en medio de la pista, sin ningún disimulo.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Actuar como si no pasara nada", "stat": "astucia" },
+        { "texto": "Exagerar todo para la cámara", "stat": "carisma" },
+        { "texto": "Taparte la cara y salir del cuadro", "stat": "aguante" }
+      ]
+    },
+    {
+      "titulo": "Baile horrible",
+      "texto": "Te agarra un ataque de baile que no tiene absolutamente nada que ver con el ritmo de la canción, y ya te vieron.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Bailarlo con toda la confianza del mundo", "stat": "carisma" },
+        { "texto": "Intentar disimular el paso", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Se pierde un jugador",
+      "texto": "En medio del quilombo del boliche te separaste del grupo y ya no ves a nadie conocido por ningún lado.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Guiarte por dónde suena más fuerte la música", "stat": "astucia" },
+        { "texto": "Mandar mensajes para ubicarlos", "stat": "suerte" }
+      ]
+    },
+    {
+      "titulo": "Alguien vomita",
+      "texto": "Al lado tuyo, alguien no la banca más y vomita justo en medio de todos, sin ningún tipo de aviso previo.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Hacerte a un lado justo a tiempo", "stat": "aguante" },
+        { "texto": "Ayudarlo disimulando la situación", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Momento épico",
+      "texto": "De la nada, todo se alinea: la canción, el grupo, el clima. Es de esos momentos que quedan para la anécdota.",
+      "dificultad": 10,
+      "opciones": [
+        { "texto": "Subirte a la ola así como viene", "stat": "suerte" },
+        { "texto": "Empujar el momento para que dure más", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Caos total de boliche",
+      "texto": "El boliche entero se prende fuego en el mejor sentido posible — o en el peor, todavía no está claro cuál de los dos.",
+      "dificultad": 16,
+      "opciones": [
+        { "texto": "Meterte de lleno en el quilombo", "stat": "aguante" },
+        { "texto": "Tratar de controlar la situación sin arruinar la joda", "stat": "astucia" }
+      ]
+    }
   ],
   "after": [
-    { "titulo": "Casa que no es de nadie", "texto": "Nadie sabe qué se puede tocar. -1 Astucia colectivo." },
-    { "titulo": "El dueño se despierta", "texto": "Elegir: chamuyar (Carisma) o huir (Suerte)." },
-    { "titulo": "Conversación profunda", "texto": "Dos jugadores pueden resolver rivalidades o quedar peor." },
-    { "titulo": "Confesión innecesaria", "texto": "Tirada de Astucia. Éxito: alivio. Fallo: cringe eterno." },
-    { "titulo": "Uno se duerme", "texto": "Queda fuera 1 ronda. Puede perder cosas." },
-    { "titulo": "Se rompe algo importante", "texto": "Consecuencia para el futuro (el DM anota)." },
-    { "titulo": "Discusión heavy", "texto": "Una relación se define para siempre." },
-    { "titulo": "Aparición inesperada", "texto": "Ex, vecino, policía o madre aparece de golpe." },
-    { "titulo": "Resaca anticipada", "texto": "-1 a todas las tiradas finales." }
+    {
+      "titulo": "Casa que no es de nadie",
+      "texto": "Llegan a un depto que no es de ninguno de ustedes y nadie tiene muy claro qué se puede tocar y qué no.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Preguntar antes de tocar cualquier cosa", "stat": "carisma" },
+        { "texto": "Fijarte con cuidado antes de actuar", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "El dueño se despierta",
+      "texto": "En medio de la noche, el dueño del lugar se despierta de golpe y los encuentra ahí, sin ninguna explicación a mano.",
+      "dificultad": 16,
+      "opciones": [
+        { "texto": "Inventar una excusa creíble", "stat": "astucia" },
+        { "texto": "Hacerte el invitado de toda la vida", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Conversación profunda",
+      "texto": "Se arma una de esas charlas hondas que solo pasan de madrugada, y de repente quedás en el centro de la conversación.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Ser sincero aunque incomode", "stat": "carisma" },
+        { "texto": "Alivianar el tema con humor", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Confesión innecesaria",
+      "texto": "Sentís las ganas irrefrenables de confesar algo que, pensándolo bien, probablemente era mejor guardarse.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Soltarlo todo de una", "stat": "suerte" },
+        { "texto": "Medir bien las palabras antes de largarlo", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Uno se duerme",
+      "texto": "El cansancio te empieza a ganar la pulseada y se te cierran los ojos ahí mismo, en medio de todos.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Luchar contra el sueño como se pueda", "stat": "aguante" },
+        { "texto": "Pedirle a alguien que te cuide las cosas", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Se rompe algo importante",
+      "texto": "En medio del descontrol algo se rompe con un ruido bastante inconfundible, y no hay forma de disimularlo.",
+      "dificultad": 16,
+      "opciones": [
+        { "texto": "Intentar arreglarlo antes de que alguien note", "stat": "astucia" },
+        { "texto": "Buscar a quién echarle la culpa", "stat": "carisma" }
+      ]
+    },
+    {
+      "titulo": "Discusión heavy",
+      "texto": "Se arma una discusión pesada que venía hace rato bajo la alfombra, y ya no da para seguir evitándola.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Plantarte y decir lo que pensás", "stat": "aguante" },
+        { "texto": "Bajar un cambio para que no escale más", "stat": "astucia" }
+      ]
+    },
+    {
+      "titulo": "Aparición inesperada",
+      "texto": "Alguien totalmente inesperado —ex, vecino, policía, madre— aparece de golpe justo en el peor momento posible.",
+      "dificultad": 16,
+      "opciones": [
+        { "texto": "Salir a explicar la situación", "stat": "carisma" },
+        { "texto": "Hacer como si todo estuviera bajo control", "stat": "aguante" }
+      ]
+    },
+    {
+      "titulo": "Resaca anticipada",
+      "texto": "El cuerpo te empieza a pasar factura antes de que termine la noche, y todavía queda un rato largo por delante.",
+      "dificultad": 13,
+      "opciones": [
+        { "texto": "Aguantar el estado como sea", "stat": "aguante" },
+        { "texto": "Buscar algo para bajar un poco el malestar", "stat": "astucia" }
+      ]
+    }
   ]
 }

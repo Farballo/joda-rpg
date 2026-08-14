@@ -25,35 +25,75 @@ with open(DATA_DIR / "npcs.json", encoding="utf-8") as f:
 FASES = ["previa", "boliche", "after", "terminado"]
 TIPOS_ENCUENTRO = {"levante", "confrontacion"}
 UMBRAL_MISTERIO_LEVANTE = 8  # NA a partir del cual el NPC de levante llega sin revelar
+STATS_JUGABLES = {"carisma", "aguante", "astucia", "suerte"}
+OTRO_OPCION = "Otro (decide DM)"  # opción libre de una situación: el jugador tira el stat que el DM le diga en voz alta
 
 MAPA_VACIO = {"id": None, "nombre": "", "zonas": []}
 
+CARTAS_DIR = DATA_DIR / "personajes_cartas"
+CARTAS_WEB_DIR = CARTAS_DIR / "web"
+EXTENSIONES_CARTA = (".webp", ".png", ".jpg", ".jpeg")
 
-def elegir_mapa_random(fase: str) -> dict:
+
+def _normalizar_nombre_carta(nombre: str) -> str:
+    return nombre.lower().replace("_", "").replace("-", "").replace(" ", "")
+
+
+def cartas_disponibles() -> dict[str, str]:
+    """Mapea personaje_id -> URL de su carta ilustrada, para los que tengan una.
+
+    Prioriza las copias livianas de `web/` (ver optimizar_cartas.py) pero cae al
+    master si todavía no se optimizó, así tirar un PNG nuevo a la carpeta
+    alcanza para que aparezca sin tocar código. Los personajes que no tengan
+    archivo quedan afuera del dict y el frontend les dibuja una carta.
+    """
+    ids_por_normalizado = {_normalizar_nombre_carta(p["id"]): p["id"] for p in PERSONAJES}
+    encontradas: dict[str, str] = {}
+
+    # el master primero y web/ después, para que la versión liviana pise al master
+    for carpeta in (CARTAS_DIR, CARTAS_WEB_DIR):
+        if not carpeta.is_dir():
+            continue
+        for archivo in sorted(carpeta.iterdir()):
+            if not archivo.is_file() or archivo.suffix.lower() not in EXTENSIONES_CARTA:
+                continue
+            personaje_id = ids_por_normalizado.get(_normalizar_nombre_carta(archivo.stem))
+            if personaje_id is None:
+                continue
+            encontradas[personaje_id] = f"/data/{archivo.relative_to(DATA_DIR).as_posix()}"
+
+    return encontradas
+
+
+def elegir_mapa_random(fase: str, habilitados: list[str] | None = None) -> dict:
     variantes = MAPA.get(fase, [])
+    if habilitados:
+        variantes = [v for v in variantes if v["id"] in habilitados] or variantes
     if not variantes:
         return dict(MAPA_VACIO)
     return random.choice(variantes)
 
 
-def elegir_mapa(fase: str, mapa_id: str) -> dict:
-    variante = next((v for v in MAPA.get(fase, []) if v["id"] == mapa_id), None)
-    if variante is None:
-        raise ValueError(f"mapa_id inválido para la fase {fase}: {mapa_id}")
-    return variante
-
-
 def estado_inicial() -> dict:
     return {
         "partida_creada": False,  # el DM tiene que crear la partida antes de que /join acepte a nadie
+        # el DM pasó de la pantalla de configuración (lobby) al dashboard de juego
+        "partida_iniciada": False,
         "fase": "previa",  # "previa" | "boliche" | "after" | "terminado"
         "jugadores": {},
-        # "<npc_id>": {"zona": "barra"} (ambiente) o {"jugador_objetivo": "<player_id>", "resuelto": False} (levante/confrontacion)
+        # "<npc_id>": {"zona": "barra", "encuentro": None | {"jugador_objetivo": "<player_id>", "resuelto": False}}
+        # El reveal es siempre global (todos ven al NPC en el mapa); el encuentro es el paso
+        # aparte, dirigido a un jugador, que solo aplica a los tipos levante/confrontacion.
         "npcs_revelados": {},
         "situacion_actual": None,  # evento activo (dict completo de eventos.json) o None
         "eventos_usados": {"previa": [], "boliche": [], "after": []},  # títulos ya mostrados, por fase
         "log_eventos": [],
         "mapa_actual": elegir_mapa_random("previa"),  # {"id", "nombre", "zonas"} — variante de data/mapa.json en uso
+        # variantes de mapa.json habilitadas por fase, configurable en el lobby previo a la partida
+        "mapas_habilitados": {fase: [v["id"] for v in variantes] for fase, variantes in MAPA.items()},
+        # títulos de eventos.json habilitados por fase, en el orden en que se listan durante la partida,
+        # configurable en el lobby previo a la partida
+        "eventos_habilitados": {fase: [e["titulo"] for e in eventos_lista] for fase, eventos_lista in EVENTOS.items()},
     }
 
 
@@ -65,6 +105,49 @@ def crear_partida() -> None:
     nuevo["partida_creada"] = True
     game_state.clear()
     game_state.update(nuevo)
+
+
+def iniciar_partida() -> None:
+    game_state["partida_iniciada"] = True
+
+
+def configurar_mapas(config: dict[str, list[str]]) -> None:
+    for fase, ids in config.items():
+        if fase not in MAPA:
+            raise ValueError(f"fase inválida: {fase}")
+        validos = {v["id"] for v in MAPA[fase]}
+        ids_filtrados = [i for i in ids if i in validos]
+        if not ids_filtrados:
+            raise ValueError(f"tenés que dejar al menos un mapa habilitado para la fase {fase}")
+        game_state["mapas_habilitados"][fase] = ids_filtrados
+
+    fase_actual = game_state["fase"]
+    habilitados_actual = game_state["mapas_habilitados"].get(fase_actual)
+    if habilitados_actual and game_state["mapa_actual"].get("id") not in habilitados_actual:
+        _aplicar_mapa(elegir_mapa_random(fase_actual, habilitados_actual))
+
+
+def configurar_eventos(config: dict[str, list[str]]) -> None:
+    for fase, titulos in config.items():
+        if fase not in EVENTOS:
+            raise ValueError(f"fase inválida: {fase}")
+        validos = {e["titulo"] for e in EVENTOS[fase]}
+        vistos = set()
+        titulos_filtrados = []
+        for titulo in titulos:
+            if titulo in validos and titulo not in vistos:
+                vistos.add(titulo)
+                titulos_filtrados.append(titulo)
+        game_state["eventos_habilitados"][fase] = titulos_filtrados
+
+
+def expulsar_jugador(player_id: str) -> None:
+    game_state["jugadores"].pop(player_id, None)
+    # el NPC sigue revelado (el reveal es global), pero su encuentro con este jugador se cae
+    for info in game_state["npcs_revelados"].values():
+        encuentro = info.get("encuentro")
+        if encuentro and encuentro["jugador_objetivo"] == player_id:
+            info["encuentro"] = None
 
 
 def crear_jugador(nombre: str, personaje_id: str) -> str:
@@ -81,9 +164,10 @@ def crear_jugador(nombre: str, personaje_id: str) -> str:
         "na": 0,
         "modo_caos_activo": False,
         "prendas_activas": [],
-        "habilidad_usada_fase": False,
-        "habilidad_usada_noche": False,
+        "debilidad_activa": False,
         "zona_actual": zonas[0]["id"] if zonas else None,
+        "puntaje": 0,
+        "historial": [],
     }
     return player_id
 
@@ -92,10 +176,32 @@ def get_personaje(personaje_id: str) -> dict | None:
     return next((p for p in PERSONAJES if p["id"] == personaje_id), None)
 
 
+def stat_efectivo(jugador: dict, personaje: dict, stat: str) -> int:
+    valor = personaje["stats"][stat]
+    debilidad = personaje["debilidad"]
+    if jugador["debilidad_activa"] and debilidad["stat"] == stat:
+        valor += debilidad["modificador"]
+    return valor
+
+
+def activar_debilidad(player_id: str) -> None:
+    game_state["jugadores"][player_id]["debilidad_activa"] = True
+
+
+def desactivar_debilidad(player_id: str) -> None:
+    game_state["jugadores"][player_id]["debilidad_activa"] = False
+
+
 def ajustar_na(player_id: str, delta: int) -> None:
     jugador = game_state["jugadores"][player_id]
     jugador["na"] = max(0, min(10, jugador["na"] + delta))
     jugador["modo_caos_activo"] = jugador["na"] >= 6
+
+
+def _registrar_resultado(player_id: str, tipo: str, nombre: str, exito: bool, puntos: int) -> None:
+    jugador = game_state["jugadores"][player_id]
+    jugador["puntaje"] += puntos
+    jugador["historial"].append({"tipo": tipo, "nombre": nombre, "exito": exito, "puntos": puntos})
 
 
 def repartir_prenda(player_id: str, prenda_id: int | None) -> int:
@@ -131,51 +237,87 @@ def get_npc(npc_id: str) -> dict | None:
 
 
 def revelar_npc(npc_id: str, zona: str) -> None:
+    """Revela un NPC de cualquier tipo en una zona del mapa, para todos los jugadores.
+
+    El reveal es un solo paso común a `ambiente`, `levante` y `confrontacion`: el NPC
+    aparece en escena y lo ve todo el mundo. La mecánica de levante/confrontación se
+    dispara después, aparte, con `iniciar_encuentro`.
+    """
     if get_npc(npc_id) is None:
         raise ValueError(f"npc_id inválido: {npc_id}")
     zonas_validas = {z["id"] for z in game_state["mapa_actual"]["zonas"]}
     if zona not in zonas_validas:
         raise ValueError(f"zona inválida en el mapa actual: {zona}")
-    game_state["npcs_revelados"][npc_id] = {"zona": zona}
+
+    # re-revelarlo lo mueve de zona sin perder el encuentro que pueda tener encima
+    previo = game_state["npcs_revelados"].get(npc_id, {})
+    game_state["npcs_revelados"][npc_id] = {"zona": zona, "encuentro": previo.get("encuentro")}
 
 
 def ocultar_npc(npc_id: str) -> None:
+    """Saca al NPC de la escena (y con él, cualquier encuentro suyo en curso)."""
     game_state["npcs_revelados"].pop(npc_id, None)
 
 
-def _encuentro_disponible(npc_id: str) -> bool:
-    info = game_state["npcs_revelados"].get(npc_id)
-    return info is None or info.get("resuelto", False)
+def encuentro_en_curso() -> tuple[str, dict] | None:
+    """`(npc_id, encuentro)` del encuentro sin resolver, si hay alguno.
+
+    El bloqueo es **global**: no puede haber más de un encuentro sin resolver en toda
+    la partida a la vez, aunque sea con NPCs y jugadores distintos — en la mesa real el
+    DM narra un encuentro por vez.
+    """
+    for npc_id, info in game_state["npcs_revelados"].items():
+        encuentro = info.get("encuentro")
+        if encuentro and not encuentro["resuelto"]:
+            return npc_id, encuentro
+    return None
 
 
-def revelar_npc_encuentro(npc_id: str | None, modo: str, jugador_objetivo: str) -> str:
+def puede_iniciar_encuentro(npc_id: str) -> bool:
+    """True si ese NPC está revelado y es de un tipo que admite encuentro.
+
+    No mira si su encuentro anterior ya se resolvió: un NPC de encuentro **no se agota**,
+    una vez resuelto se le puede asignar otro encuentro al mismo o a otro jugador.
+    """
+    if npc_id not in game_state["npcs_revelados"]:
+        return False
+    npc = get_npc(npc_id)
+    return npc is not None and npc.get("tipo") in TIPOS_ENCUENTRO
+
+
+def iniciar_encuentro(npc_id: str | None, jugador_objetivo: str) -> str:
+    """Arranca un encuentro de levante/confrontación sobre un NPC **ya revelado**.
+
+    `npc_id=None` elige al azar entre los NPCs revelados que admitan encuentro.
+    """
     if jugador_objetivo not in game_state["jugadores"]:
         raise ValueError(f"player_id inválido: {jugador_objetivo}")
 
-    fase = game_state["fase"]
+    en_curso = encuentro_en_curso()
+    if en_curso is not None:
+        npc_bloqueante = get_npc(en_curso[0])
+        nombre = npc_bloqueante["nombre"] if npc_bloqueante else en_curso[0]
+        raise ValueError(
+            f"Ya hay un encuentro sin resolver ({nombre}). Esperá a que se resuelva o sacá al NPC de la escena"
+        )
 
-    if modo == "random":
-        candidatos = [
-            n["id"] for n in NPCS
-            if n.get("tipo") in TIPOS_ENCUENTRO
-            and n["fase"] == fase
-            and _encuentro_disponible(n["id"])
-        ]
+    if npc_id is None:
+        candidatos = [nid for nid in game_state["npcs_revelados"] if puede_iniciar_encuentro(nid)]
         if not candidatos:
-            raise ValueError(f"No quedan NPCs de encuentro disponibles para la fase {fase}")
+            raise ValueError("No hay NPCs de levante/confrontación revelados. Revelá uno antes de iniciar el encuentro")
         npc_id = random.choice(candidatos)
-    elif modo == "elegir":
-        npc = get_npc(npc_id)
-        if npc is None or npc.get("tipo") not in TIPOS_ENCUENTRO:
-            raise ValueError(f"npc_id inválido: {npc_id}")
-        if not _encuentro_disponible(npc_id):
-            raise ValueError(f"{npc_id} ya tiene un encuentro activo sin resolver con otro jugador")
-    else:
-        raise ValueError(f"modo inválido: {modo}")
+    elif npc_id not in game_state["npcs_revelados"]:
+        raise ValueError(f"{npc_id} todavía no está revelado: revelalo antes de iniciar el encuentro")
+    elif not puede_iniciar_encuentro(npc_id):
+        raise ValueError(f"{npc_id} no es un NPC de levante ni de confrontación")
 
-    game_state["npcs_revelados"][npc_id] = {
+    game_state["npcs_revelados"][npc_id]["encuentro"] = {
         "jugador_objetivo": jugador_objetivo,
         "resuelto": False,
+        "nodo_actual": get_npc(npc_id)["arbol"]["inicio"],
+        "acumulado": 0,
+        "rondas_jugadas": 0,
+        "tiradas": [],
     }
     return npc_id
 
@@ -194,68 +336,134 @@ def npc_con_misterio(npc: dict, jugador: dict) -> dict:
 
 
 def npcs_revelados_para_jugador(player_id: str) -> dict:
+    """Los NPCs revelados como los ve un jugador puntual.
+
+    La **existencia** del NPC es global: todos ven a todos los revelados en el mapa.
+    Lo único dirigido es el estado del **encuentro**: solo el `jugador_objetivo` lo
+    recibe (con el NPC ya filtrado por el misterio de lindura si corresponde); para el
+    resto viaja en `None`, así no se enteran de con quién está el encuentro en curso.
+    """
+    jugador = game_state["jugadores"].get(player_id)
     resultado = {}
+
     for npc_id, info in game_state["npcs_revelados"].items():
         npc = get_npc(npc_id)
         if npc is None:
             continue
-        if npc.get("tipo") == "ambiente" or info.get("jugador_objetivo") == player_id:
-            resultado[npc_id] = info
+
+        encuentro = info.get("encuentro")
+        visible = None
+        if encuentro and jugador and encuentro["jugador_objetivo"] == player_id:
+            # el misterio cae al resolver el intento, sin importar el NA (sección 2 del plan)
+            npc_visible = npc if encuentro["resuelto"] else npc_con_misterio(npc, jugador)
+            # el árbol completo (con las respuestas y ramas futuras) es spoiler: el jugador
+            # solo recibe el nodo actual, sin las respuestas ni el destino de cada opción
+            npc_sin_arbol = {k: v for k, v in npc_visible.items() if k != "arbol"}
+            visible = {**encuentro, "npc": npc_sin_arbol}
+            if not encuentro["resuelto"]:
+                nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
+                visible["nodo"] = {
+                    "texto": nodo["texto"],
+                    "opciones": [{"texto": o["texto"], "stat": o["stat"]} for o in nodo["opciones"]],
+                }
+
+        resultado[npc_id] = {"zona": info.get("zona"), "encuentro": visible}
+
     return resultado
 
 
-def _npc_de_encuentro_valido(npc_id: str, player_id: str, tipo_esperado: str) -> tuple[dict, dict]:
+def _npc_de_encuentro_valido(npc_id: str, player_id: str) -> tuple[dict, dict]:
     info = game_state["npcs_revelados"].get(npc_id)
     if info is None:
         raise ValueError(f"npc_id inválido: {npc_id}")
-    if info.get("jugador_objetivo") != player_id:
+
+    encuentro = info.get("encuentro")
+    if encuentro is None or encuentro["jugador_objetivo"] != player_id:
         raise ValueError("Este encuentro no es tuyo")
-    if info.get("resuelto"):
+    if encuentro["resuelto"]:
         raise ValueError("Ya intentaste este encuentro")
 
     npc = get_npc(npc_id)
-    if npc is None or npc.get("tipo") != tipo_esperado:
-        raise ValueError(f"npc_id no es de tipo {tipo_esperado}: {npc_id}")
-    return npc, info
+    if npc is None or npc.get("tipo") not in TIPOS_ENCUENTRO:
+        raise ValueError(f"npc_id no es de tipo levante ni confrontación: {npc_id}")
+    return npc, encuentro
 
 
-def intentar_levante(player_id: str, npc_id: str) -> dict:
-    npc, info = _npc_de_encuentro_valido(npc_id, player_id, "levante")
+def intentar_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, stat_otro: str | None = None) -> dict:
+    """Camina un paso del árbol de diálogo de un encuentro de levante/confrontación.
+
+    Cada ronda tira dados y suma al acumulado del encuentro. Si la opción elegida (o la
+    rama "Otro") no tiene `siguiente` nodo, ahí se resuelve el encuentro completo: se
+    compara `acumulado` contra `dificultad_por_ronda * rondas_jugadas` y se registra el
+    resultado en el puntaje del jugador. Si tiene `siguiente`, el encuentro sigue abierto
+    en el nodo próximo y todavía no se toca el puntaje.
+    """
+    npc, encuentro = _npc_de_encuentro_valido(npc_id, player_id)
+    nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
+
+    if stat_otro is not None:
+        if stat_otro not in STATS_JUGABLES:
+            raise ValueError(f"stat inválido: {stat_otro}")
+        stat, respuesta, siguiente = stat_otro, None, None
+    else:
+        if opcion_idx is None or not (0 <= opcion_idx < len(nodo["opciones"])):
+            raise ValueError(f"opcion_idx inválido para este nodo: {opcion_idx}")
+        opcion = nodo["opciones"][opcion_idx]
+        stat, respuesta, siguiente = opcion["stat"], opcion["respuesta"], opcion["siguiente"]
+
     jugador = game_state["jugadores"][player_id]
     personaje = get_personaje(jugador["personaje_id"])
+    resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
 
-    resultado = dice.tirar(jugador["na"], "carisma", personaje["stats"]["carisma"])
-    info["resuelto"] = True
+    encuentro["acumulado"] += resultado["total"]
+    encuentro["rondas_jugadas"] += 1
+    encuentro["tiradas"].append(resultado)
 
-    return {
+    if siguiente is not None:
+        encuentro["nodo_actual"] = siguiente
+        nodo_siguiente = npc["arbol"]["nodos"][siguiente]
+        return {
+            **resultado,
+            "resuelto": False,
+            "npc_id": npc_id,
+            "stat": stat,
+            "respuesta": respuesta,
+            "siguiente_nodo": {
+                "texto": nodo_siguiente["texto"],
+                "opciones": [{"texto": o["texto"], "stat": o["stat"]} for o in nodo_siguiente["opciones"]],
+            },
+        }
+
+    es_levante = npc["tipo"] == "levante"
+    dificultad_por_ronda = npc["dificultad_chamuyo"] if es_levante else npc["dificultad"]
+    dificultad_total = dificultad_por_ronda * encuentro["rondas_jugadas"]
+    exito = encuentro["acumulado"] >= dificultad_total
+    encuentro["resuelto"] = True
+
+    puntos = (npc["puntaje_lindura"] if exito else 0) if es_levante else (1 if exito else 0)
+    _registrar_resultado(player_id, npc["tipo"], npc["nombre"], exito, puntos)
+
+    respuesta_final = {
         **resultado,
+        "resuelto": True,
         "npc_id": npc_id,
-        "exito": resultado["total"] >= npc["dificultad_chamuyo"],
-        "puntaje_lindura": npc["puntaje_lindura"],
+        "stat": stat,
+        "exito": exito,
+        "acumulado": encuentro["acumulado"],
+        "dificultad_total": dificultad_total,
+        "respuesta": respuesta,
     }
-
-
-def intentar_confrontacion(player_id: str, npc_id: str, stat: str) -> dict:
-    npc, info = _npc_de_encuentro_valido(npc_id, player_id, "confrontacion")
-
-    stats_validos = {op["stat"] for op in npc["opciones"]}
-    if stat not in stats_validos:
-        raise ValueError(f"stat inválido para este NPC: {stat}")
-
-    jugador = game_state["jugadores"][player_id]
-    personaje = get_personaje(jugador["personaje_id"])
-
-    resultado = dice.tirar(jugador["na"], stat, personaje["stats"][stat])
-    info["resuelto"] = True
-
-    return {**resultado, "npc_id": npc_id, "stat": stat}
+    if es_levante:
+        respuesta_final["puntaje_lindura"] = npc["puntaje_lindura"]
+    return respuesta_final
 
 
 def siguiente_situacion(modo: str, titulo: str | None = None) -> dict:
     fase = game_state["fase"]
-    eventos_fase = EVENTOS.get(fase, [])
+    habilitados = set(game_state["eventos_habilitados"].get(fase, []))
+    eventos_fase = [e for e in EVENTOS.get(fase, []) if e["titulo"] in habilitados]
     if not eventos_fase:
-        raise ValueError(f"No hay eventos definidos para la fase {fase}")
+        raise ValueError(f"No hay eventos habilitados para la fase {fase}")
 
     if modo == "random":
         usados = set(game_state["eventos_usados"].get(fase, []))
@@ -268,10 +476,42 @@ def siguiente_situacion(modo: str, titulo: str | None = None) -> dict:
     else:
         raise ValueError(f"modo inválido: {modo}")
 
-    game_state["situacion_actual"] = evento
+    situacion = {**evento, "resuelta": False, "resuelta_por": None, "exito": None, "opcion_elegida": None}
+    game_state["situacion_actual"] = situacion
     if evento["titulo"] not in game_state["eventos_usados"][fase]:
         game_state["eventos_usados"][fase].append(evento["titulo"])
-    return evento
+    return situacion
+
+
+def intentar_situacion(player_id: str, stat: str, opcion: str | None = None) -> dict:
+    situacion = game_state["situacion_actual"]
+    if situacion is None:
+        raise ValueError("No hay ninguna situación activa")
+    if situacion["resuelta"]:
+        raise ValueError("Esta situación ya fue resuelta")
+
+    if opcion == OTRO_OPCION:
+        if stat not in STATS_JUGABLES:
+            raise ValueError(f"stat inválido: {stat}")
+    else:
+        stats_definidos = {op["stat"] for op in situacion["opciones"]}
+        if stat not in stats_definidos:
+            raise ValueError(f"stat inválido para esta situación: {stat}")
+
+    jugador = game_state["jugadores"][player_id]
+    personaje = get_personaje(jugador["personaje_id"])
+
+    resultado = dice.tirar(jugador["na"], stat, stat_efectivo(jugador, personaje, stat))
+    exito = resultado["total"] >= situacion["dificultad"]
+
+    situacion["resuelta"] = True
+    situacion["resuelta_por"] = jugador["nombre"]
+    situacion["exito"] = exito
+    situacion["opcion_elegida"] = opcion
+
+    _registrar_resultado(player_id, "situacion", situacion["titulo"], exito, 1 if exito else 0)
+
+    return {**resultado, "stat": stat, "exito": exito, "dificultad": situacion["dificultad"]}
 
 
 def _aplicar_mapa(mapa: dict) -> None:
@@ -283,17 +523,11 @@ def _aplicar_mapa(mapa: dict) -> None:
         jugador["zona_actual"] = zona_default
 
 
-def cambiar_mapa(mapa_id: str | None = None) -> dict:
-    fase = game_state["fase"]
-    mapa = elegir_mapa(fase, mapa_id) if mapa_id else elegir_mapa_random(fase)
-    _aplicar_mapa(mapa)
-    return mapa
-
-
 def _entrar_a_fase(nueva_fase: str) -> None:
     game_state["fase"] = nueva_fase
     game_state["situacion_actual"] = None
-    _aplicar_mapa(elegir_mapa_random(nueva_fase))
+    habilitados = game_state["mapas_habilitados"].get(nueva_fase)
+    _aplicar_mapa(elegir_mapa_random(nueva_fase, habilitados))
 
     if nueva_fase == "after":
         # Leyenda Urbana (NA 10) vuelve a Modo Caos (NA 6) al empezar el After — sección 5.4 del plan

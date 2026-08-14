@@ -77,7 +77,12 @@ static/jugador.html      # vista del jugador (mobile-first)
    encuentros de NPC "levante"/"confrontación" por turnos, sección 2 y
    milestone 11 del plan — dejó de estar excluido: se agregó a pedido
    explícito, acotado a lo que describe el plan. No lo confundas con
-   "agregar algo porque sumaría": ya está pedido, hay que construirlo.)*
+   "agregar algo porque sumaría": ya está pedido, hay que construirlo.
+   Lo mismo pasó después con el árbol de decisiones por rondas y el
+   puntaje total de la noche — sección 2, filas "Encare por rondas" y
+   "Puntaje total de la noche", y milestone 13: reemplaza la tirada única
+   de `intentar_levante`/`intentar_confrontacion` por `intentar_encare`,
+   que camina 1 a 3 rondas encadenadas y acumula antes de resolver.)*
 
 3.1. **Los encuentros de NPC (levante/confrontación) son por turnos, el
    resto del juego no.** Tiradas libres, NA, prendas y situaciones de fase

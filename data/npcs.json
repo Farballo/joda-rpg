@@ -59,7 +59,39 @@
     "tipo": "levante",
     "fase": "previa",
     "puntaje_lindura": 6,
-    "dificultad_chamuyo": 12
+    "dificultad_chamuyo": 12,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "Te mira de reojo, atenta a lo que decís.",
+          "opciones": [
+            { "texto": "Le tirás una frase con toda la soltura", "stat": "carisma",
+              "respuesta": "Se ríe y te sigue el juego.", "siguiente": "ronda_2_soltura" },
+            { "texto": "La hacés reír con algo random", "stat": "carisma",
+              "respuesta": "Levanta una ceja, pero sonríe.", "siguiente": "ronda_2_random" }
+          ]
+        },
+        "ronda_2_soltura": {
+          "texto": "Se acerca un paso, con onda.",
+          "opciones": [
+            { "texto": "Le seguís el clima, tranquilo", "stat": "carisma",
+              "respuesta": "Asiente, cómoda.", "siguiente": null },
+            { "texto": "Subís la apuesta con algo más directo", "stat": "carisma",
+              "respuesta": "Se sorprende, pero no se va.", "siguiente": null }
+          ]
+        },
+        "ronda_2_random": {
+          "texto": "Te sigue la joda, medio incrédula.",
+          "opciones": [
+            { "texto": "Redoblás la apuesta con otro chiste", "stat": "carisma",
+              "respuesta": "Se ríe de nuevo, ya más suelta.", "siguiente": null },
+            { "texto": "Cambiás el tono, más en serio", "stat": "carisma",
+              "respuesta": "Te mira distinto, con más atención.", "siguiente": null }
+          ]
+        }
+      }
+    }
   },
   {
     "id": "hermano_mayor",
@@ -70,11 +102,21 @@
     "importancia": "importante",
     "tipo": "confrontacion",
     "fase": "previa",
-    "opciones": [
-      { "texto": "Lo calmás con onda", "stat": "carisma" },
-      { "texto": "Le decís que se relaje, no pasa nada", "stat": "presencia" },
-      { "texto": "Le ofrecés hacerte cargo si algo se rompe", "stat": "suerte" }
-    ]
+    "dificultad": 11,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "Te corta el paso cruzado de brazos, mirando la casa como si fuera a explotar.",
+          "opciones": [
+            { "texto": "Lo calmás con onda", "stat": "carisma",
+              "respuesta": "Se relaja un toque, sigue mirando pero ya no tan tenso.", "siguiente": null },
+            { "texto": "Le ofrecés hacerte cargo si algo se rompe", "stat": "suerte",
+              "respuesta": "Lo piensa, y afloja un poco la guardia.", "siguiente": null }
+          ]
+        }
+      }
+    }
   },
   {
     "id": "el_rulo",
@@ -86,7 +128,75 @@
     "tipo": "levante",
     "fase": "boliche",
     "puntaje_lindura": 8,
-    "dificultad_chamuyo": 14
+    "dificultad_chamuyo": 14,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "Te mira con una sonrisa picara mientras te acomodás del choque.",
+          "opciones": [
+            { "texto": "Le seguís el juego, como si nada", "stat": "carisma",
+              "respuesta": "Te sigue mirando, ahora de frente.", "siguiente": "ronda_2_juego" },
+            { "texto": "Le hacés un comentario picante", "stat": "carisma",
+              "respuesta": "Levanta las cejas, sorprendido... para bien.", "siguiente": "ronda_2_picante" }
+          ]
+        },
+        "ronda_2_juego": {
+          "texto": "Te arrastra un poco más cerca de la pista.",
+          "opciones": [
+            { "texto": "Lo invitás a bailar", "stat": "carisma",
+              "respuesta": "Acepta al toque y te agarra de la mano.", "siguiente": "ronda_3_baile" },
+            { "texto": "Le proponés ir a un rincón más tranquilo a hablar", "stat": "carisma",
+              "respuesta": "Duda un segundo, pero te sigue.", "siguiente": "ronda_3_rincon" }
+          ]
+        },
+        "ronda_2_picante": {
+          "texto": "Te devuelve el comentario con otro más picante todavía.",
+          "opciones": [
+            { "texto": "Subís la apuesta sin filtro", "stat": "carisma",
+              "respuesta": "Se ríe fuerte y te toca el brazo.", "siguiente": "ronda_3_apuesta" },
+            { "texto": "Bajás un cambio y lo hacés reír con algo más soft", "stat": "carisma",
+              "respuesta": "Se relaja y te mira distinto.", "siguiente": "ronda_3_soft" }
+          ]
+        },
+        "ronda_3_baile": {
+          "texto": "Bailan un rato y se acerca más.",
+          "opciones": [
+            { "texto": "Le seguís el ritmo, cómodo", "stat": "carisma",
+              "respuesta": "Te agarra de la cintura, a gusto.", "siguiente": null },
+            { "texto": "Le hacés una jugada más atrevida", "stat": "carisma",
+              "respuesta": "Se ríe sorprendido, pero no se corre.", "siguiente": null }
+          ]
+        },
+        "ronda_3_rincon": {
+          "texto": "En el rincón, hablan más tranquilos.",
+          "opciones": [
+            { "texto": "Le contás algo real de vos", "stat": "carisma",
+              "respuesta": "Te escucha con atención, se acerca un poco.", "siguiente": null },
+            { "texto": "Le seguís tirando joda", "stat": "carisma",
+              "respuesta": "Se ríe, pero te mira distinto, más en serio.", "siguiente": null }
+          ]
+        },
+        "ronda_3_apuesta": {
+          "texto": "El clima está a mil, todo pasa rápido.",
+          "opciones": [
+            { "texto": "Vas con todo", "stat": "carisma",
+              "respuesta": "No se corre ni un poco.", "siguiente": null },
+            { "texto": "Frenás un cambio, para no pasarte", "stat": "carisma",
+              "respuesta": "Te lo agradece con una sonrisa cómplice.", "siguiente": null }
+          ]
+        },
+        "ronda_3_soft": {
+          "texto": "El clima bajó, pero sigue ahí, con onda.",
+          "opciones": [
+            { "texto": "Le proponés algo simple, tomar algo juntos", "stat": "carisma",
+              "respuesta": "Acepta y se sienta cerca tuyo.", "siguiente": null },
+            { "texto": "Le hacés otro chiste para recuperar el clima", "stat": "carisma",
+              "respuesta": "Se ríe de nuevo, ya relajado.", "siguiente": null }
+          ]
+        }
+      }
+    }
   },
   {
     "id": "patovica",
@@ -97,11 +207,75 @@
     "importancia": "importante",
     "tipo": "confrontacion",
     "fase": "boliche",
-    "opciones": [
-      { "texto": "Lo tratás de convencer", "stat": "carisma" },
-      { "texto": "Te la jugás y pasás igual", "stat": "aguante" },
-      { "texto": "Le birlás algo para que te deje pasar", "stat": "suerte" }
-    ]
+    "dificultad": 14,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "\"A ver, documento. ¿Y ese estado en el que venís?\"",
+          "opciones": [
+            { "texto": "Lo tratás de convencer", "stat": "carisma",
+              "respuesta": "Te mira con desconfianza, pero te escucha.", "siguiente": "ronda_2_convencer" },
+            { "texto": "Te la jugás y pasás igual", "stat": "aguante",
+              "respuesta": "Te frena en seco con el brazo.", "siguiente": "ronda_2_pasar" }
+          ]
+        },
+        "ronda_2_convencer": {
+          "texto": "Sigue con cara de póker, pero ya no te cortó del todo.",
+          "opciones": [
+            { "texto": "Le birlás algo para que te deje pasar", "stat": "suerte",
+              "respuesta": "Se hace el distraído y te deja acercarte.", "siguiente": "ronda_3_birla" },
+            { "texto": "Insistís con más onda todavía", "stat": "carisma",
+              "respuesta": "Se ríe a pesar suyo y afloja un poco.", "siguiente": "ronda_3_onda" }
+          ]
+        },
+        "ronda_2_pasar": {
+          "texto": "Te agarra del hombro, no muy convencido de dejarte pasar así nomás.",
+          "opciones": [
+            { "texto": "Te plantás y no te movés", "stat": "aguante",
+              "respuesta": "Te mide con la mirada, calculando si vale la pena la discusión.", "siguiente": "ronda_3_plantado" },
+            { "texto": "Cambiás de táctica y le tirás una joda", "stat": "carisma",
+              "respuesta": "Se le escapa una sonrisa, pero se repone rápido.", "siguiente": "ronda_3_joda" }
+          ]
+        },
+        "ronda_3_birla": {
+          "texto": "Está a un paso de dejarte pasar.",
+          "opciones": [
+            { "texto": "Rematás con una última movida", "stat": "suerte",
+              "respuesta": "Se hace a un lado, medio resignado.", "siguiente": null },
+            { "texto": "Le agradecés y avanzás tranquilo", "stat": "carisma",
+              "respuesta": "Te deja pasar sin decir nada más.", "siguiente": null }
+          ]
+        },
+        "ronda_3_onda": {
+          "texto": "Ya casi te deja entrar, solo falta el empujón final.",
+          "opciones": [
+            { "texto": "Le tirás la frase justa", "stat": "carisma",
+              "respuesta": "Se ríe y te hace pasar con la cabeza.", "siguiente": null },
+            { "texto": "Le ofrecés algo rápido para sellarlo", "stat": "suerte",
+              "respuesta": "Lo piensa un segundo y te deja entrar.", "siguiente": null }
+          ]
+        },
+        "ronda_3_plantado": {
+          "texto": "El clima está tenso, nadie afloja.",
+          "opciones": [
+            { "texto": "Aguantás la mirada sin moverte", "stat": "aguante",
+              "respuesta": "Termina cediendo él, cansado de la discusión.", "siguiente": null },
+            { "texto": "Le birlás algo para cortar la tensión", "stat": "suerte",
+              "respuesta": "Se distrae justo lo suficiente para dejarte pasar.", "siguiente": null }
+          ]
+        },
+        "ronda_3_joda": {
+          "texto": "La joda lo descolocó un poco, pero sigue en guardia.",
+          "opciones": [
+            { "texto": "Redoblás la apuesta con otra joda", "stat": "carisma",
+              "respuesta": "Se ríe fuerte y te deja pasar, divertido.", "siguiente": null },
+            { "texto": "Te plantás con aguante, sin ceder", "stat": "aguante",
+              "respuesta": "Se cansa de discutir y te deja pasar.", "siguiente": null }
+          ]
+        }
+      }
+    }
   },
   {
     "id": "morocho_after",
@@ -113,7 +287,21 @@
     "tipo": "levante",
     "fase": "after",
     "puntaje_lindura": 7,
-    "dificultad_chamuyo": 13
+    "dificultad_chamuyo": 13,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "Te mira de reojo cuando te acercás, con esa calma de after.",
+          "opciones": [
+            { "texto": "Le tirás una frase tranquila, sin apuro", "stat": "carisma",
+              "respuesta": "Sonríe despacio y te hace lugar al lado.", "siguiente": null },
+            { "texto": "Le preguntás qué está mirando en el techo", "stat": "carisma",
+              "respuesta": "Se ríe bajito y te cuenta una batalla random.", "siguiente": null }
+          ]
+        }
+      }
+    }
   },
   {
     "id": "vecino_6am",
@@ -124,10 +312,38 @@
     "importancia": "importante",
     "tipo": "confrontacion",
     "fase": "after",
-    "opciones": [
-      { "texto": "Le pedís disculpas y lo calmás", "stat": "carisma" },
-      { "texto": "Le bajás el volumen a todo y aguantás el reto", "stat": "aguante" },
-      { "texto": "Le ofrecés algo para que se vaya tranquilo", "stat": "astucia" }
-    ]
+    "dificultad": 13,
+    "arbol": {
+      "inicio": "ronda_1",
+      "nodos": {
+        "ronda_1": {
+          "texto": "Golpea la puerta en piyama, furioso: \"¡Basta! ¡Son las 6 de la mañana!\"",
+          "opciones": [
+            { "texto": "Le pedís disculpas y tratás de calmarlo", "stat": "carisma",
+              "respuesta": "Baja un poco el tono, pero sigue mosqueado.", "siguiente": "ronda_2_disculpas" },
+            { "texto": "Le bajás el volumen a todo y aguantás el reto", "stat": "aguante",
+              "respuesta": "Te grita un rato más, pero ya está bajando la música.", "siguiente": "ronda_2_aguante" }
+          ]
+        },
+        "ronda_2_disculpas": {
+          "texto": "Todavía no se termina de ir, mira para adentro de la casa.",
+          "opciones": [
+            { "texto": "Le ofrecés algo para que se vaya tranquilo", "stat": "astucia",
+              "respuesta": "Duda, pero termina aceptando y se da media vuelta.", "siguiente": null },
+            { "texto": "Le seguís pidiendo disculpas hasta que afloje", "stat": "carisma",
+              "respuesta": "Suspira y se resigna a volver a dormir.", "siguiente": null }
+          ]
+        },
+        "ronda_2_aguante": {
+          "texto": "Sigue ahí parado, sin irse todavía.",
+          "opciones": [
+            { "texto": "Le ofrecés algo para que se vaya tranquilo", "stat": "astucia",
+              "respuesta": "Lo piensa, refunfuña, pero se lo lleva.", "siguiente": null },
+            { "texto": "Te plantás y esperás a que se canse solo", "stat": "aguante",
+              "respuesta": "Se cansa antes que vos y se va mascullando.", "siguiente": null }
+          ]
+        }
+      }
+    }
   }
 ]

@@ -5,7 +5,7 @@
   <title>Joda RPG — Panel del DM</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="pagina-dm">
+<body class="pagina-dm" data-fase="previa">
   <div class="dm-topbar">
     <div>
       <div class="dm-logo">JODA RPG</div>
@@ -17,14 +17,52 @@
     </div>
   </div>
 
+  <div id="dm-error" class="oculto"></div>
+
   <div id="pantalla-crear-partida" class="pantalla-crear-partida">
     <h1>Arrancar la noche</h1>
-    <p>Todavía no hay una partida activa. Creála para que los jugadores puedan unirse desde sus celus.</p>
-    <button id="btn-crear-partida" type="button">🎉 Crear partida</button>
+    <p>Todavía no hay una partida activa. Abrí la sala para configurarla y que los jugadores puedan unirse desde sus celus.</p>
+    <button id="btn-crear-partida" type="button">🎉 Abrir sala</button>
+  </div>
+
+  <div class="pantalla-configuracion oculto" id="pantalla-configuracion">
+    <section class="dm-card">
+      <h2>🗺️ Mapas por fase</h2>
+      <p>Elegí qué variantes de mapa pueden salir en cada fase. Tiene que quedar al menos una por fase. El mapa se elige acá — durante la partida ya no se puede cambiar.</p>
+      <div id="config-mapas"></div>
+    </section>
+
+    <section class="dm-card">
+      <h2>📋 Eventos de la noche</h2>
+      <p>Elegí qué situaciones pueden salir en cada fase y en qué orden se listan durante la partida. Las que dejes destildadas no van a aparecer.</p>
+      <div id="config-eventos"></div>
+    </section>
+
+    <section class="dm-card">
+      <h2>👥 Jugadores conectados</h2>
+      <p>Se suman solos a medida que entran desde <code>/jugador</code>. También podés agregar uno a mano o sacar a alguien antes de arrancar.</p>
+      <ul id="config-lista-jugadores">
+        <li>Todavía no se unió nadie.</li>
+      </ul>
+      <form id="form-agregar-dummy" class="agregar-dummy-form">
+        <input type="text" id="input-dummy-nombre" placeholder="Nombre del jugador" required>
+        <select id="select-dummy-personaje"></select>
+        <button type="submit">➕ Agregar jugador</button>
+      </form>
+    </section>
+
+    <button id="btn-empezar-partida" type="button">▶️ Empezar partida</button>
   </div>
 
   <div class="dm-grid oculto" id="dm-dashboard">
-    <main class="dm-main">
+    <section class="dm-col-jugadores dm-card">
+      <h2>Jugadores</h2>
+      <ul id="lista-jugadores">
+        <li>Cargando...</li>
+      </ul>
+    </section>
+
+    <main class="dm-col-central">
       <section class="dm-card">
         <div class="dm-card-head">
           <h2>Situación actual</h2>
@@ -38,50 +76,41 @@
       </section>
 
       <section class="dm-card">
-        <div class="dm-card-head">
-          <h2 id="mapa-nombre-actual">Mapa</h2>
-          <div class="cambiar-mapa-form">
-            <select id="select-mapa"></select>
-            <button id="btn-cambiar-mapa" type="button">🗺️ Cambiar mapa</button>
-          </div>
-        </div>
+        <h2 id="mapa-nombre-actual">Mapa</h2>
         <div id="mapa-visual" class="mapa-visual"></div>
-      </section>
-
-      <section class="dm-card">
-        <h2>Eventos de la fase</h2>
-        <div id="lista-eventos"></div>
       </section>
     </main>
 
-    <aside class="dm-sidebar">
-      <section class="dm-card">
-        <h2>Jugadores</h2>
-        <ul id="lista-jugadores">
-          <li>Cargando...</li>
-        </ul>
+    <aside class="dm-col-tabs">
+      <div class="dm-tabs-nav" id="dm-tabs-nav">
+        <button type="button" class="dm-tab-btn" data-tab="eventos">📋 Eventos</button>
+        <button type="button" class="dm-tab-btn" data-tab="npc">🎭 NPCs</button>
+        <button type="button" class="dm-tab-btn" data-tab="ia">🪄 Narrador IA</button>
+        <button type="button" class="dm-tab-btn" data-tab="tiradas">🎲 Tiradas</button>
+        <button type="button" class="dm-tab-btn" data-tab="puntaje">🏆 Puntaje</button>
+      </div>
+
+      <section class="dm-card dm-tab-panel" data-tab-panel="eventos">
+        <h2>Eventos de la fase</h2>
+        <div id="lista-eventos"></div>
       </section>
 
-      <section class="dm-card">
+      <section class="dm-card dm-tab-panel" data-tab-panel="npc">
         <h2>Revelar NPC</h2>
+        <p class="dm-hint">Aparece en el mapa para todos. Si es de levante o confrontación, después le arrancás el encuentro a un jugador desde la lista de abajo.</p>
         <div class="revelar-npc-form">
           <select id="select-npc"></select>
           <select id="select-zona-npc"></select>
           <button id="btn-revelar-npc" type="button">Revelar</button>
         </div>
+
+        <div id="encuentro-en-curso"></div>
+
+        <h2>En escena</h2>
+        <div id="lista-npcs-revelados"></div>
       </section>
 
-      <section class="dm-card">
-        <h2>Encuentro de NPC (levante / confrontación)</h2>
-        <div class="revelar-npc-form">
-          <select id="select-npc-encuentro"></select>
-          <select id="select-jugador-objetivo"></select>
-          <button id="btn-revelar-encuentro" type="button">Revelar encuentro</button>
-        </div>
-        <div id="lista-encuentros"></div>
-      </section>
-
-      <section class="dm-card">
+      <section class="dm-card dm-tab-panel" data-tab-panel="ia">
         <h2>Narrador IA</h2>
         <textarea id="narrar-prompt-extra" placeholder="Contexto extra (opcional): ej. Facu falló Carisma feo, Juli está en Modo Caos..."></textarea>
         <button id="btn-narrar-ia" type="button">🪄 Narrar con IA</button>
@@ -91,15 +120,21 @@
         </div>
       </section>
 
-      <section class="dm-card">
+      <section class="dm-card dm-tab-panel" data-tab-panel="tiradas">
         <h2>Tiradas</h2>
         <ul id="log-eventos">
           <li>Cargando...</li>
         </ul>
       </section>
+
+      <section class="dm-card dm-tab-panel" data-tab-panel="puntaje">
+        <h2>Puntaje de la noche</h2>
+        <div id="ranking-puntaje"></div>
+      </section>
     </aside>
   </div>
 
+  <script src="/static/carta.js"></script>
   <script src="/static/dm.js"></script>
 </body>
 </html>
