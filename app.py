@@ -1,3 +1,5 @@
+import socket
+
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -37,6 +39,29 @@ from game_state import (
     revelar_npc,
     siguiente_situacion,
 )
+
+def obtener_ip_lan() -> str:
+    """IP de este equipo en la red local, para que el DM le pase la URL a los
+    jugadores (ver EJECUTAR_EN_OTRA_PC.md, sección 5). No manda tráfico de
+    verdad: abrir un socket UDP hacia una IP externa solo hace que el SO
+    elija qué interfaz de red usaría, y de ahí se lee la IP local — funciona
+    sin internet y es multiplataforma (a diferencia de parsear ipconfig/
+    Get-NetIPAddress, que son específicos de Windows). Es una comodidad
+    para el DM, no algo de lo que dependa el juego — cualquier error acá
+    (firewall bloqueando sockets, sin interfaces de red, lo que sea) tiene
+    que devolver un fallback en vez de tirar abajo el endpoint."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    except OSError:
+        return "127.0.0.1"
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
 
 app = FastAPI()
 
@@ -83,6 +108,7 @@ def estado_jugador_msg(player_id: str):
     jugador = game_state["jugadores"][player_id]
     return {
         "type": "estado",
+        "partida_iniciada": game_state["partida_iniciada"],
         "na": jugador["na"],
         "modo_caos_activo": jugador["modo_caos_activo"],
         "debilidad_activa": jugador["debilidad_activa"],
@@ -130,6 +156,21 @@ async def broadcast_npc_revelado(npc: dict, zona: str):
 
 async def broadcast_narracion(texto: str):
     mensaje = {"type": "narracion", "texto": texto}
+    for player_id in list(player_connections.keys()):
+        ws = player_connections.get(player_id)
+        if ws is None:
+            continue
+        try:
+            await ws.send_json(mensaje)
+        except Exception:
+            player_connections.pop(player_id, None)
+
+
+async def broadcast_cerrar_intro():
+    """El DM puede cerrar la tarjeta de introducción en la pantalla de todos los
+    jugadores de una — por si alguno se distrajo o tarda en tocar "Empezar" por su
+    cuenta. Cada jugador también la puede cerrar solo, eso no pasa por el server."""
+    mensaje = {"type": "cerrar_intro"}
     for player_id in list(player_connections.keys()):
         ws = player_connections.get(player_id)
         if ws is None:
@@ -190,6 +231,11 @@ async def get_cartas():
     return cartas_disponibles()
 
 
+@app.get("/api/ip")
+async def get_ip():
+    return {"ip": obtener_ip_lan()}
+
+
 @app.post("/join")
 async def join(req: JoinRequest):
     try:
@@ -218,6 +264,9 @@ async def ws_dm(websocket: WebSocket):
 
             elif msg.get("type") == "iniciar_partida":
                 iniciar_partida()
+                # los jugadores que ya se unieron y están esperando necesitan enterarse
+                # de que arrancó, para pasar de la pantalla de espera al juego
+                await broadcast_estado_todos_jugadores()
                 await broadcast_estado_dm()
 
             elif msg.get("type") == "configurar_mapas":
@@ -390,11 +439,11 @@ async def ws_dm(websocket: WebSocket):
                     continue
 
                 jugador_objetivo = resultado["jugador_objetivo"]
-                if resultado["resuelto"]:
-                    npc = get_npc(npc_id)
-                    registrar_tirada(
-                        jugador_objetivo, resultado["stat"], {**resultado, "total": resultado["total_ajustado"]}, npc["nombre"]
-                    )
+                npc = get_npc(npc_id)
+                contexto = f"{npc['nombre']} (ronda {resultado['rondas_jugadas']})"
+                registrar_tirada(
+                    jugador_objetivo, resultado["stat"], {**resultado, "total": resultado["total_ajustado"]}, contexto
+                )
 
                 ws_jugador = player_connections.get(jugador_objetivo)
                 if ws_jugador is not None:
@@ -464,6 +513,9 @@ async def ws_dm(websocket: WebSocket):
                 texto = msg.get("texto")
                 if texto:
                     await broadcast_narracion(texto)
+
+            elif msg.get("type") == "cerrar_intro_para_todos":
+                await broadcast_cerrar_intro()
     except WebSocketDisconnect:
         dm_connections.remove(websocket)
 

@@ -50,6 +50,10 @@ let mapa = {};
 let npcs = [];
 let ws = null;
 let eventosHabilitadosActual = {};
+// host que se les pasa a los jugadores para conectarse desde otro dispositivo
+// (IP en la wifi local, no "localhost" — ver EJECUTAR_EN_OTRA_PC.md sección 5).
+// Si el fetch a /api/ip falla por lo que sea, cae de vuelta a location.host.
+let hostParaJugadores = location.host;
 
 // id del jugador cuyo menú (prendas / mover) está abierto en el riel, si hay alguno.
 // El riel se re-renderiza entero en cada estado_completo, así que guardamos esto
@@ -79,6 +83,21 @@ async function cargarMapa() {
 async function cargarNpcs() {
   const res = await fetch("/data/npcs.json");
   npcs = await res.json();
+}
+
+async function cargarIpLan() {
+  try {
+    const res = await fetch("/api/ip");
+    if (!res.ok) throw new Error(`/api/ip respondió ${res.status}`);
+    const { ip } = await res.json();
+    if (!ip) throw new Error("/api/ip no devolvió una ip");
+    const puerto = location.port ? `:${location.port}` : "";
+    hostParaJugadores = `${ip}${puerto}`;
+  } catch (err) {
+    // sin red, o el endpoint no respondió — se queda con location.host
+    console.warn("No se pudo obtener la IP de LAN, mostrando location.host:", err);
+  }
+  document.getElementById("config-url-jugador").textContent = `${hostParaJugadores}/jugador`;
 }
 
 function nombrePersonaje(personajeId) {
@@ -841,6 +860,11 @@ function broadcastearNarracion(texto) {
   ws.send(JSON.stringify({ type: "broadcastear_narracion", texto }));
 }
 
+function cerrarIntroParaTodos() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "cerrar_intro_para_todos" }));
+}
+
 function mostrarResultadoNarracion(texto) {
   const cont = document.getElementById("resultado-narracion");
   const parrafo = document.getElementById("narracion-texto");
@@ -918,7 +942,7 @@ function mostrarError(detalle) {
 }
 
 function actualizarSalaChip(jugadores) {
-  document.getElementById("sala-chip-host").textContent = `${location.host}/jugador`;
+  document.getElementById("sala-chip-host").textContent = `${hostParaJugadores}/jugador`;
   document.getElementById("sala-chip-conectados").textContent = Object.keys(jugadores).length;
 }
 
@@ -1119,6 +1143,8 @@ document.getElementById("btn-puntaje").addEventListener("click", () => {
   document.getElementById("overlay-puntaje").classList.remove("oculto");
 });
 
+document.getElementById("btn-cerrar-intro-dm").addEventListener("click", cerrarIntroParaTodos);
+
 document.getElementById("btn-cerrar-puntaje-dm").addEventListener("click", () => {
   document.getElementById("overlay-puntaje").classList.add("oculto");
 });
@@ -1205,6 +1231,7 @@ function poblarSelectDummyPersonaje() {
   await cargarMapa();
   await cargarNpcs();
   await cargarCartas();
+  await cargarIpLan();
   poblarSelectDummyPersonaje();
   conectarWs();
 })();

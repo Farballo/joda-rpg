@@ -656,8 +656,10 @@ def test_el_nodo_visible_no_expone_respuesta_ni_siguiente_ni_el_arbol_completo(c
         assert set(opcion.keys()) == {"texto", "stat"}
 
 
-def test_el_log_del_dm_registra_una_sola_entrada_por_encuentro_resuelto(client):
-    """El log se llena al resolver el encuentro completo, no ronda por ronda."""
+def test_el_log_del_dm_registra_una_entrada_por_ronda_de_encuentro(client):
+    """Un encare de varias rondas deja una entrada por ronda en el log, no solo la
+    última — si no, el DM pierde de vista cómo le fue al jugador en las rondas
+    intermedias."""
     player_id = unirse(client)
     gs.revelar_npc("sofia", zona_actual())
     gs.iniciar_encuentro("sofia", player_id)
@@ -670,8 +672,9 @@ def test_el_log_del_dm_registra_una_sola_entrada_por_encuentro_resuelto(client):
         elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
         elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
 
-    assert len(gs.game_state["log_eventos"]) == 1
-    assert gs.game_state["log_eventos"][0]["contexto"] == "Sofía"
+    assert len(gs.game_state["log_eventos"]) == 2
+    assert gs.game_state["log_eventos"][0]["contexto"] == "Sofía (ronda 1)"
+    assert gs.game_state["log_eventos"][1]["contexto"] == "Sofía (ronda 2)"
 
 
 def test_cambiar_de_fase_limpia_revelados_y_encuentros(client):

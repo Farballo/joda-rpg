@@ -31,7 +31,7 @@
     <div class="config-columnas">
       <section class="dm-card">
         <h2>👥 Jugadores conectados</h2>
-        <p>Se suman solos a medida que entran desde <code>/jugador</code>. También podés agregar uno a mano o sacar a alguien antes de arrancar.</p>
+        <p>Se suman solos a medida que entran desde <code id="config-url-jugador">/jugador</code> (misma wifi que este equipo). También podés agregar uno a mano o sacar a alguien antes de arrancar.</p>
         <ul id="config-lista-jugadores">
           <li>Todavía no se unió nadie.</li>
         </ul>
@@ -72,6 +72,7 @@
           <li class="fase-paso" data-fase="after">After</li>
         </ol>
         <button id="btn-avanzar-fase" type="button" class="btn-primario" title="Pasa a la siguiente fase de la noche y sortea un mapa nuevo para ella">⚡ Avanzar fase</button>
+        <button id="btn-cerrar-intro-dm" type="button" title="Cierra la tarjeta de introducción en la pantalla de todos los jugadores (por si alguno todavía no la sacó solo)">📣</button>
         <button id="btn-puntaje" type="button" title="Ver el ranking y el historial de puntos de la noche">🏆</button>
         <button id="btn-nueva-partida-dash" type="button" title="Empezar una partida nueva (desconecta a todos los jugadores actuales)">🔄</button>
       </div>

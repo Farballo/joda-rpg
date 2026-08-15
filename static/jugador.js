@@ -702,6 +702,10 @@ function salirDePartida() {
   reiniciarSesion(null);
 }
 
+// null = todavía no sabemos si la partida arrancó; se completa con el primer "estado"
+let partidaIniciadaConocida = null;
+let yaEntroAlJuego = false;
+
 function conectarWsJugador(playerId) {
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${protocolo}://${location.host}/ws/player/${playerId}`);
@@ -709,6 +713,26 @@ function conectarWsJugador(playerId) {
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === "estado") {
+      if (!yaEntroAlJuego) {
+        const antesIniciada = partidaIniciadaConocida;
+        partidaIniciadaConocida = msg.partida_iniciada;
+
+        if (!partidaIniciadaConocida) {
+          mostrarVistaEsperandoInicio();
+        } else {
+          yaEntroAlJuego = true;
+          if (antesIniciada === false) {
+            // veníamos esperando en la pantalla anterior y el DM la arrancó ahora
+            reproducirComienzoDeNoche();
+          } else {
+            // ya estaba iniciada desde que nos conectamos (nos unimos tarde, o
+            // recargamos la página en medio de la partida) — directo al juego, sin
+            // la animación de arranque
+            mostrarVistaJuego();
+          }
+        }
+      }
+
       actualizarNa(msg.na);
       renderPrendas(msg.prendas);
       renderModoCaos(msg.modo_caos_activo);
@@ -744,6 +768,9 @@ function conectarWsJugador(playerId) {
     if (msg.type === "narracion") {
       mostrarNarracion(msg.texto);
     }
+    if (msg.type === "cerrar_intro") {
+      cerrarIntro();
+    }
     if (msg.type === "partida_terminada") {
       reiniciarSesion("El DM inició una partida nueva. Volvés a la pantalla de unirte.");
     }
@@ -758,27 +785,63 @@ function conectarWsJugador(playerId) {
   };
 }
 
-async function mostrarPantallaJuego(nombre, personajeId) {
+const TEXTO_INTRO_NOCHE =
+  "🌙 Arrancó la noche. A partir de acá el DM va a ir marcando situaciones y NPCs — vos tirás los dados y decidís cómo salir de cada una. Che, avisale a los demás si alguno todavía no la vio. ¡Que la suerte (o el chamuyo) te acompañe!";
+
+/** Todo lo que hay que tener listo antes de mostrar cualquier pantalla del juego
+ * (carta propia, prendas, npcs) — corre una sola vez, sea cual sea la pantalla que
+ * termine viéndose (espera de inicio o el juego directamente). */
+async function prepararJugador(nombre, personajeId) {
   document.getElementById("pantalla-join").classList.add("oculto");
-  document.getElementById("pantalla-espera").classList.remove("oculto");
   document.getElementById("nombre-confirmado").textContent = nombre;
 
   personajeActual = personajes.find((p) => p.id === personajeId);
   renderMiCarta(personajeActual);
+  document.getElementById("esperando-inicio-carta").innerHTML = personajeActual ? cartaThumbHtml(personajeActual) : "";
   await cargarPrendas();
   await cargarNpcs();
 }
 
-(async function init() {
-  document.getElementById("btn-toggle-mapa").addEventListener("click", () => {
-    document.getElementById("vista-mapa").classList.remove("oculto");
-  });
+function mostrarVistaEsperandoInicio() {
+  document.getElementById("pantalla-espera").classList.add("oculto");
+  document.getElementById("pantalla-esperando-inicio").classList.remove("oculto");
+}
 
-  document.getElementById("btn-cerrar-mapa").addEventListener("click", () => {
-    document.getElementById("vista-mapa").classList.add("oculto");
+function mostrarVistaJuego() {
+  document.getElementById("pantalla-esperando-inicio").classList.add("oculto");
+  document.getElementById("pantalla-espera").classList.remove("oculto");
+}
+
+/** El DM acaba de arrancar la partida mientras esperábamos: 2 segundos de "Comenzando
+ * la noche" y después la tarjeta de introducción, antes de entrar al juego de verdad. */
+function reproducirComienzoDeNoche() {
+  mostrarVistaJuego();
+  document.getElementById("comenzando-overlay").classList.remove("oculto");
+  setTimeout(() => {
+    document.getElementById("comenzando-overlay").classList.add("oculto");
+    mostrarIntro();
+  }, 2000);
+}
+
+function mostrarIntro() {
+  document.getElementById("intro-texto").textContent = TEXTO_INTRO_NOCHE;
+  document.getElementById("intro-overlay").classList.remove("oculto");
+}
+
+function cerrarIntro() {
+  document.getElementById("intro-overlay").classList.add("oculto");
+}
+
+(async function init() {
+  document.getElementById("btn-toggle-mapa").addEventListener("click", (e) => {
+    const vistaMapa = document.getElementById("vista-mapa");
+    const abrir = vistaMapa.classList.contains("oculto");
+    vistaMapa.classList.toggle("oculto", !abrir);
+    e.target.textContent = abrir ? "← Volver a la partida" : "🗺️ ¿Qué está pasando?";
   });
 
   document.getElementById("btn-salir-partida").addEventListener("click", salirDePartida);
+  document.getElementById("btn-salir-espera").addEventListener("click", salirDePartida);
 
   document.getElementById("chip-puntaje").addEventListener("click", () => {
     document.getElementById("puntaje-overlay").classList.remove("oculto");
@@ -796,6 +859,8 @@ async function mostrarPantallaJuego(nombre, personajeId) {
     document.getElementById("mi-carta-overlay").classList.add("oculto");
   });
 
+  document.getElementById("btn-cerrar-intro").addEventListener("click", cerrarIntro);
+
   personajes = await cargarPersonajes();
   await cargarCartas();
 
@@ -804,7 +869,8 @@ async function mostrarPantallaJuego(nombre, personajeId) {
   const personajeIdGuardado = localStorage.getItem("personaje_id");
 
   if (playerIdGuardado && nombreGuardado && personajeIdGuardado) {
-    await mostrarPantallaJuego(nombreGuardado, personajeIdGuardado);
+    await prepararJugador(nombreGuardado, personajeIdGuardado);
+    mostrarVistaEsperandoInicio(); // por defecto, hasta que el primer "estado" diga otra cosa
     conectarWsJugador(playerIdGuardado);
     return;
   }
@@ -855,10 +921,13 @@ async function mostrarPantallaJuego(nombre, personajeId) {
       localStorage.setItem("nombre", nombre);
       localStorage.setItem("personaje_id", personaje.id);
 
-      mostrarReveal(personaje, async () => {
-        await mostrarPantallaJuego(nombre, personaje.id);
-        conectarWsJugador(player_id);
-      });
+      await prepararJugador(nombre, personaje.id);
+      mostrarVistaEsperandoInicio(); // por defecto, debajo del reveal, hasta que sepamos si ya arrancó
+      // el reveal de la carta tapa todo (z-index alto): no importa el orden entre
+      // esto y que llegue el primer "estado" por WS, nunca se ve la pantalla de abajo
+      // hasta que el jugador toca "Entrar a la noche"
+      mostrarReveal(personaje, () => {});
+      conectarWsJugador(player_id);
     } catch (err) {
       error.textContent = err.message;
     }

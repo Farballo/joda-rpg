@@ -34,7 +34,28 @@
     <div class="reveal-inner">
       <div class="reveal-eyebrow">ESTA NOCHE SOS</div>
       <div class="reveal-carta-slot" id="reveal-carta-slot"></div>
-      <button type="button" id="btn-reveal-listo">Entrar a la joda</button>
+      <button type="button" id="btn-reveal-listo">Entrar a la noche</button>
+    </div>
+  </div>
+
+  <div id="pantalla-esperando-inicio" class="oculto">
+    <div class="esperando-inicio-inner">
+      <div class="esperando-inicio-carta" id="esperando-inicio-carta"></div>
+      <h1>Ya estás listo</h1>
+      <p>El DM está terminando de armar la noche. Esperá acá, arranca en cualquier momento...</p>
+      <button id="btn-salir-espera" type="button">Salir de la partida</button>
+    </div>
+  </div>
+
+  <div id="comenzando-overlay" class="oculto">
+    <div class="comenzando-texto">Comenzando la noche</div>
+  </div>
+
+  <div id="intro-overlay" class="oculto">
+    <div class="intro-inner">
+      <div class="intro-eyebrow">ANTES DE ARRANCAR</div>
+      <p id="intro-texto"></p>
+      <button type="button" id="btn-cerrar-intro">Entendido, ¡vamos!</button>
     </div>
   </div>
 
@@ -88,7 +109,6 @@
     <div id="vista-mapa" class="oculto">
       <h2>Mapa — <span id="mapa-fase-nombre"></span></h2>
       <div id="mapa-zonas-jugador"></div>
-      <button id="btn-cerrar-mapa" type="button">← Volver a la partida</button>
     </div>
 
     <button id="btn-salir-partida" type="button">Salir de la partida</button>

@@ -282,12 +282,6 @@ form#form-join > button[type="submit"] {
   margin-top: 0.75rem;
 }
 
-#btn-cerrar-mapa {
-  width: 100%;
-  padding: 0.6rem;
-  margin-top: 0.5rem;
-}
-
 .token-npc {
   background: #2a0f22;
   color: var(--pink);
@@ -2012,7 +2006,8 @@ code {
   .tablero { grid-template-columns: 320px minmax(0, 1fr) 340px; }
 }
 
-#btn-salir-partida {
+#btn-salir-partida,
+#btn-salir-espera {
   width: 100%;
   margin-top: 2rem;
   background: transparent;
@@ -2504,6 +2499,134 @@ code {
   color: #fff;
   border: none;
   animation: reveal-texto 0.5s 0.7s ease both;
+}
+
+/* ==========================================================================
+   De la sala de espera al arranque de la noche
+   ========================================================================== */
+
+#pantalla-esperando-inicio {
+  display: flex;
+  min-height: 70vh;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.esperando-inicio-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 320px;
+}
+
+.esperando-inicio-carta {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--pink);
+  animation: carta-latido 2.4s ease-in-out infinite;
+}
+
+.esperando-inicio-inner h1 {
+  margin: 0;
+}
+
+#comenzando-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: #07070b;
+  padding: 1.5rem;
+}
+
+#comenzando-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* gradient fijo de 2 colores a propósito (no animado): con 3+ colores animando el
+   background-position, el punto medio del recorte de texto pasa por mezclas
+   apagadas/grisáceas en algunos frames — con 2 nomás no hay punto medio feo posible */
+.comenzando-texto {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  text-align: center;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: comenzando-entra 0.5s ease both, comenzando-pulso 1.2s 0.5s ease-in-out infinite;
+}
+
+@keyframes comenzando-entra {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes comenzando-pulso {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1250;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 1.5rem;
+}
+
+#intro-overlay:not(.oculto) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-inner {
+  width: min(100%, 380px);
+  background: linear-gradient(135deg, var(--panel2), var(--bg));
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 40px rgba(39, 226, 210, 0.3);
+  border-radius: 20px;
+  padding: 1.5rem;
+  text-align: center;
+  animation: npc-card-in 0.35s ease;
+}
+
+.intro-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  font-weight: bold;
+}
+
+#intro-texto {
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0.75rem 0 1.25rem;
+}
+
+#btn-cerrar-intro {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  color: #fff;
+  border: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comenzando-texto,
+  .esperando-inicio-carta {
+    animation: none;
+  }
 }
 
 /* ==========================================================================

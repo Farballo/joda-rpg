@@ -500,6 +500,7 @@ def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
             "jugador_objetivo": player_id,
             "stat": stat,
             "respuesta": respuesta,
+            "rondas_jugadas": encuentro["rondas_jugadas"],
             "siguiente_nodo": {
                 "texto": nodo_siguiente["texto"],
                 "opciones": [{"texto": o["texto"], "stat": o["stat"]} for o in nodo_siguiente["opciones"]],
@@ -525,6 +526,7 @@ def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
         "acumulado": encuentro["acumulado"],
         "dificultad_total": dificultad_total,
         "respuesta": respuesta,
+        "rondas_jugadas": encuentro["rondas_jugadas"],
     }
     if es_levante:
         respuesta_final["puntaje_lindura"] = npc["puntaje_lindura"]
