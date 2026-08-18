@@ -4,6 +4,12 @@
     "nombre": "El Intenso",
     "frase": "Si no pasa algo ahora, no pasa nunca.",
     "stats": { "carisma": 4, "aguante": 0, "astucia": -2, "suerte": -2 },
+    "ataques": [
+      { "nombre": "Frase sin filtro", "stat": "carisma" },
+      { "nombre": "Se planta sin moverse", "stat": "aguante" },
+      { "nombre": "Se arriesga sin pensar", "stat": "astucia" }
+    ],
+    "ultimate": { "nombre": "Todo o nada", "stat": "carisma" },
     "modo_caos": {
       "nombre": "AHORA O NUNCA",
       "efecto": "Una vez por escena, puede forzar una acción extrema sin tirar dados (encarar, gritar, subirse a algo, confrontar a alguien).",
@@ -21,6 +27,12 @@
     "nombre": "El Suertudo",
     "frase": "No sé cómo pasó, pero salió.",
     "stats": { "carisma": 0, "aguante": -2, "astucia": 0, "suerte": 4 },
+    "ataques": [
+      { "nombre": "Comentario zafado", "stat": "carisma" },
+      { "nombre": "Sale con una jugada rara", "stat": "astucia" },
+      { "nombre": "Confía en la suerte", "stat": "suerte" }
+    ],
+    "ultimate": { "nombre": "Golpe de la fortuna", "stat": "suerte" },
     "modo_caos": {
       "nombre": "Modo Dios",
       "efecto": "Todas las tiradas cuentan con +2 de suerte adicional. Podés convertir 1 fallo por fase en éxito total.",
@@ -38,6 +50,12 @@
     "nombre": "El Profe Rama",
     "frase": "Pará, pará... chequeate esto.",
     "stats": { "carisma": 2, "aguante": 0, "astucia": 2, "suerte": 0 },
+    "ataques": [
+      { "nombre": "Chamuyo con onda", "stat": "carisma" },
+      { "nombre": "Argumento imbatible", "stat": "astucia" },
+      { "nombre": "Se banca la incomodidad", "stat": "aguante" }
+    ],
+    "ultimate": { "nombre": "Clase magistral", "stat": "astucia" },
     "modo_caos": {
       "nombre": "Caos Puro",
       "efecto": "Cada vez que fallás una tirada, podés repetirla. Si tiene éxito, arrastra a otro jugador a la escena.",
@@ -55,6 +73,12 @@
     "nombre": "El Gym Bro",
     "frase": "Tranqui, yo me la banco.",
     "stats": { "carisma": -2, "aguante": 4, "astucia": -2, "suerte": 0 },
+    "ataques": [
+      { "nombre": "Frase simple y directa", "stat": "carisma" },
+      { "nombre": "Se planta físico", "stat": "aguante" },
+      { "nombre": "Actúa sin pensarlo dos veces", "stat": "astucia" }
+    ],
+    "ultimate": { "nombre": "Modo bestia", "stat": "aguante" },
     "modo_caos": {
       "nombre": "Animal",
       "efecto": "Aguante pasa a +6. Ignora dolor, empujones y cansancio.",
@@ -72,6 +96,12 @@
     "nombre": "El Tímido",
     "frase": "Yo estoy bien acá... creo.",
     "stats": { "carisma": -2, "aguante": 2, "astucia": 4, "suerte": 0 },
+    "ataques": [
+      { "nombre": "Comentario tímido pero certero", "stat": "carisma" },
+      { "nombre": "Lee la situación", "stat": "astucia" },
+      { "nombre": "Aguanta el momento incómodo", "stat": "aguante" }
+    ],
+    "ultimate": { "nombre": "Golpe de genialidad", "stat": "astucia" },
     "modo_caos": {
       "nombre": "Me solté",
       "efecto": "Carisma pasa de -1 a +1. Puede iniciar interacciones sociales sin penalización.",
@@ -89,6 +119,12 @@
     "nombre": "El Fachero",
     "frase": "No hace nada extraordinario... pero todo le queda bien.",
     "stats": { "carisma": 4, "aguante": 0, "astucia": 0, "suerte": -2 },
+    "ataques": [
+      { "nombre": "Mirada segura", "stat": "carisma" },
+      { "nombre": "Postura relajada", "stat": "aguante" },
+      { "nombre": "Comentario con onda", "stat": "suerte" }
+    ],
+    "ultimate": { "nombre": "Mirada letal", "stat": "carisma" },
     "modo_caos": {
       "nombre": "Invencible",
       "efecto": "Todos los fallos de Carisma se repiten automáticamente.",

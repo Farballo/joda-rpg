@@ -304,49 +304,57 @@ def test_modificador_dm_de_situacion_puede_convertir_un_exito_en_fracaso(monkeyp
     assert gs.game_state["jugadores"][player_id]["puntaje"] == 0
 
 
-def test_encare_de_levante_exitoso_suma_el_puntaje_lindura(monkeypatch):
+def test_encare_de_levante_exitoso_suma_puntaje_segun_formula(monkeypatch):
     _forzar_total(monkeypatch, 999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("morocho_after", "living")
     gs.iniciar_encuentro("morocho_after", player_id)
 
-    gs.elegir_opcion_encare(player_id, "morocho_after", opcion_idx=0)
-    resultado = gs.resolver_ronda_encare("morocho_after")
+    gs.elegir_ataque_encare(player_id, "morocho_after", 0)
+    resultado = gs.resolver_ronda_encare("morocho_after", habilidad_npc_idx=0)
 
     jugador = gs.game_state["jugadores"][player_id]
     assert resultado["resuelto"] is True
-    assert jugador["puntaje"] == 7  # puntaje_lindura de morocho_after
+    assert resultado["exito"] is True
+    # round((hot=7 + crazy=3) / 2) = 5, + bonus de eficiencia (5 rondas límite - 1 jugada) = 4
+    assert jugador["puntaje"] == 9
     assert jugador["historial"] == [
-        {"tipo": "levante", "nombre": "El Morocho de Ojos Claros", "exito": True, "puntos": 7}
+        {"tipo": "levante", "nombre": "El Morocho de Ojos Claros", "exito": True, "puntos": 9}
     ]
 
 
-def test_encare_de_confrontacion_exitosa_suma_un_punto(monkeypatch):
+def test_encare_de_confrontacion_exitosa_suma_puntaje_segun_formula(monkeypatch):
     _forzar_total(monkeypatch, 999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
-    gs.resolver_ronda_encare("hermano_mayor")
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", 0)
+    gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
 
     jugador = gs.game_state["jugadores"][player_id]
-    assert jugador["puntaje"] == 1
+    # round((locura=4 + dureza=6) / 2) = 5, + bonus de eficiencia (5 - 1) = 4
+    assert jugador["puntaje"] == 9
     assert jugador["historial"] == [
-        {"tipo": "confrontacion", "nombre": "El Hermano Mayor", "exito": True, "puntos": 1}
+        {"tipo": "confrontacion", "nombre": "El Hermano Mayor", "exito": True, "puntos": 9}
     ]
 
 
-def test_encare_fallido_no_suma_puntos_pero_registra_el_fracaso(monkeypatch):
+def test_encare_fallido_al_llegar_al_limite_de_rondas_no_suma_puntos(monkeypatch):
     _forzar_total(monkeypatch, -999)
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
-    gs.resolver_ronda_encare("hermano_mayor")
+    resultado = None
+    for _ in range(gs.LIMITE_RONDAS_ENCARE):
+        gs.elegir_ataque_encare(player_id, "hermano_mayor", 0)
+        resultado = gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
 
     jugador = gs.game_state["jugadores"][player_id]
+    assert resultado["resuelto"] is True
+    assert resultado["exito"] is False
+    assert resultado["hp_npc"] == gs.get_npc("hermano_mayor")["hp"]  # nunca le bajó el HP
     assert jugador["puntaje"] == 0
     assert jugador["historial"] == [
         {"tipo": "confrontacion", "nombre": "El Hermano Mayor", "exito": False, "puntos": 0}
@@ -354,52 +362,159 @@ def test_encare_fallido_no_suma_puntos_pero_registra_el_fracaso(monkeypatch):
 
 
 def test_encare_de_varias_rondas_solo_registra_el_resultado_una_vez(monkeypatch):
-    _forzar_total(monkeypatch, 999)
+    _forzar_total(monkeypatch, 11)  # 11 - defensa(2) = 9 de daño por ronda, hp(18) baja a 0 en 2 rondas
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("sofia", "living")
     gs.iniciar_encuentro("sofia", player_id)
     jugador = gs.game_state["jugadores"][player_id]
 
-    gs.elegir_opcion_encare(player_id, "sofia", opcion_idx=0)
-    resultado_ronda_1 = gs.resolver_ronda_encare("sofia")
+    gs.elegir_ataque_encare(player_id, "sofia", 0)
+    resultado_ronda_1 = gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)
     assert resultado_ronda_1["resuelto"] is False
+    assert resultado_ronda_1["hp_npc"] == 9
     assert jugador["puntaje"] == 0
     assert jugador["historial"] == []
 
-    gs.elegir_opcion_encare(player_id, "sofia", opcion_idx=0)
-    resultado_ronda_2 = gs.resolver_ronda_encare("sofia")
+    gs.elegir_ataque_encare(player_id, "sofia", 0)
+    resultado_ronda_2 = gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)
     assert resultado_ronda_2["resuelto"] is True
-    assert jugador["puntaje"] == 6  # puntaje_lindura de sofía
+    assert resultado_ronda_2["hp_npc"] == 0
+    # round((hot=6 + crazy=4) / 2) = 5, + bonus de eficiencia (5 - 2 rondas) = 3
+    assert jugador["puntaje"] == 8
     assert len(jugador["historial"]) == 1
 
 
-def test_modificador_dm_puede_convertir_un_fracaso_en_exito(monkeypatch):
-    """El DM juzga que la frase estuvo buenísima: el bonus alcanza para pasar la dificultad."""
+def test_modificador_dm_aumenta_el_dano_de_esa_ronda(monkeypatch):
+    """El DM juzga que la frase estuvo buenísima: el bonus se nota en el daño de esa ronda."""
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    _forzar_total(monkeypatch, 8)  # 8 < 11 (dificultad de hermano_mayor): solo, sería fracaso
-    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
-    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=4)
+    _forzar_total(monkeypatch, 2)  # 2 - defensa(1) = 1 de daño sin el bonus del DM
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", 0)
+    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=4, habilidad_npc_idx=0)
 
-    assert resultado["total_ajustado"] == 12
-    assert resultado["exito"] is True
-    assert gs.game_state["jugadores"][player_id]["puntaje"] == 1
+    assert resultado["total_ajustado"] == 6
+    assert resultado["dano"] == 5
+    assert resultado["hp_npc"] == gs.get_npc("hermano_mayor")["hp"] - 5
 
 
-def test_modificador_dm_puede_convertir_un_exito_en_fracaso(monkeypatch):
-    """El DM juzga que la frase fue un papelón: el malus tira abajo lo que iba a ser éxito."""
+def test_modificador_dm_negativo_puede_dejar_el_dano_en_cero(monkeypatch):
+    """El DM juzga que la frase fue un papelón: el malus se come el daño de esa ronda."""
     player_id = gs.crear_jugador("Facu", "intenso")
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    _forzar_total(monkeypatch, 12)  # 12 >= 11: solo, sería éxito
-    gs.elegir_opcion_encare(player_id, "hermano_mayor", opcion_idx=0)
-    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=-4)
+    _forzar_total(monkeypatch, 3)  # 3 - defensa(1) = 2 de daño sin el malus del DM
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", 0)
+    resultado = gs.resolver_ronda_encare("hermano_mayor", modificador_dm=-4, habilidad_npc_idx=0)
 
-    assert resultado["total_ajustado"] == 8
-    assert resultado["exito"] is False
+    assert resultado["total_ajustado"] == -1
+    assert resultado["dano"] == 0  # el daño nunca es negativo
+    assert resultado["hp_npc"] == gs.get_npc("hermano_mayor")["hp"]
+
+
+def test_contraataque_del_npc_aplica_debuff_al_stat_elegido(monkeypatch):
+    _forzar_total(monkeypatch, 5)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("sofia", "living")
+    gs.iniciar_encuentro("sofia", player_id)
+
+    gs.elegir_ataque_encare(player_id, "sofia", 0)  # carisma
+    gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)  # habilidad 0 de sofía debilita carisma
+
+    encuentro = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
+    assert encuentro["debuffs_jugador"] == {"carisma": 3}  # ataque de sofía
+
+
+def test_debuff_resta_del_stat_valor_en_la_ronda_siguiente(monkeypatch):
+    _forzar_total(monkeypatch, 5)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("sofia", "living")
+    gs.iniciar_encuentro("sofia", player_id)
+
+    gs.elegir_ataque_encare(player_id, "sofia", 0)  # carisma
+    gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)  # debuff carisma -3
+
+    gs.elegir_ataque_encare(player_id, "sofia", 0)  # carisma otra vez, ya debuffeado
+    resultado = gs.resolver_ronda_encare("sofia", habilidad_npc_idx=1)
+
+    personaje = gs.get_personaje("intenso")
+    assert resultado["debuff_valor"] == 3
+    assert resultado["stat_valor"] == personaje["stats"]["carisma"] - 3
+
+
+def test_debuff_pisa_en_vez_de_acumularse_sobre_el_mismo_stat(monkeypatch):
+    _forzar_total(monkeypatch, 5)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("sofia", "living")
+    gs.iniciar_encuentro("sofia", player_id)
+
+    gs.elegir_ataque_encare(player_id, "sofia", 0)
+    gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)  # debuff carisma -3
+
+    gs.elegir_ataque_encare(player_id, "sofia", 2)  # suerte, no toca carisma
+    gs.resolver_ronda_encare("sofia", habilidad_npc_idx=0)  # otra vez debuff carisma -3
+
+    encuentro = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
+    assert encuentro["debuffs_jugador"]["carisma"] == 3  # pisó, no se sumó a 6
+
+
+def test_habilidad_npc_libre_permite_al_dm_elegir_el_stat_debuffado(monkeypatch):
+    _forzar_total(monkeypatch, 5)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("sofia", "living")
+    gs.iniciar_encuentro("sofia", player_id)
+
+    gs.elegir_ataque_encare(player_id, "sofia", 0)
+    resultado = gs.resolver_ronda_encare(
+        "sofia", habilidad_npc_idx="libre", stat_objetivo_libre="suerte", texto_libre="Te tira una mirada rara"
+    )
+
+    assert resultado["stat_debuffado"] == "suerte"
+    assert resultado["texto_habilidad_npc"] == "Te tira una mirada rara"
+    encuentro = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
+    assert encuentro["debuffs_jugador"] == {"suerte": 3}
+
+
+def test_ultimate_duplica_el_dano_de_esa_ronda(monkeypatch):
+    _forzar_total(monkeypatch, 5)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("hermano_mayor", "living")
+    gs.iniciar_encuentro("hermano_mayor", player_id)
+
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", "ultimate")
+    resultado = gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
+
+    assert resultado["total_ajustado"] == 10  # (5 + 0) * 2
+    assert resultado["dano"] == 9  # 10 - defensa(1)
+
+
+def test_ultimate_solo_se_puede_usar_una_vez_por_fase(monkeypatch):
+    _forzar_total(monkeypatch, 999)  # resuelve el encuentro de un solo golpe
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("hermano_mayor", "living")
+    gs.iniciar_encuentro("hermano_mayor", player_id)
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", "ultimate")
+    gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
+
+    gs.revelar_npc("vecino_6am", "living")
+    gs.iniciar_encuentro("vecino_6am", player_id)
+    with pytest.raises(ValueError):
+        gs.elegir_ataque_encare(player_id, "vecino_6am", "ultimate")
+
+
+def test_ultimate_se_resetea_al_cambiar_de_fase(monkeypatch):
+    _forzar_total(monkeypatch, 999)
+    player_id = gs.crear_jugador("Facu", "intenso")
+    gs.revelar_npc("hermano_mayor", "living")
+    gs.iniciar_encuentro("hermano_mayor", player_id)
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", "ultimate")
+    gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
+
+    gs.avanzar_fase()
+
+    assert gs.game_state["jugadores"][player_id]["ultimate_usado_fase"] is False
 
 
 def test_desglose_stat_sin_debilidad_activa():
@@ -448,10 +563,10 @@ def test_resolver_ronda_encare_incluye_el_desglose_de_debilidad(monkeypatch):
     gs.revelar_npc("hermano_mayor", "living")
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
-    # "Otro" para poder elegir astucia (la debilidad de "intenso"), sin depender de
-    # que alguna opción predefinida del árbol use justo ese stat
-    gs.elegir_opcion_encare(player_id, "hermano_mayor", stat_otro="astucia")
-    resultado = gs.resolver_ronda_encare("hermano_mayor")
+    # ataque_idx 2 de "intenso" ("Se arriesga sin pensar") es justo el que tira
+    # astucia, la debilidad de este personaje
+    gs.elegir_ataque_encare(player_id, "hermano_mayor", 2)
+    resultado = gs.resolver_ronda_encare("hermano_mayor", habilidad_npc_idx=0)
 
     assert resultado["stat"] == "astucia"
     assert resultado["stat_base"] == -2

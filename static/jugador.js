@@ -11,6 +11,9 @@ const TEXTO_TIPO = {
   exito_bonus: "¡ÉXITO CON BONUS! ⭐",
 };
 
+// mismo tope que LIMITE_RONDAS_ENCARE en game_state.py
+const LIMITE_RONDAS_ENCARE = 5;
+
 // mismos presets que usa el DM para juzgar encares y situaciones — acá solo sirven
 // para traducir el modificador_dm de vuelta a su etiqueta al mostrar el desglose
 const PRESETS_MODIFICADOR_DM = [
@@ -45,6 +48,10 @@ function desgloseTiradaHtml(msg) {
     filas.push(`<li>😵 Debilidad (${msg.debilidad_nombre}): <b>${mod >= 0 ? "+" : ""}${mod}</b></li>`);
   }
 
+  if (msg.debuff_valor) {
+    filas.push(`<li>😈 Debuff activo: <b>-${msg.debuff_valor}</b></li>`);
+  }
+
   if (msg.modificador_na) {
     filas.push(`<li>Nivel de Alcohol: <b>${msg.modificador_na >= 0 ? "+" : ""}${msg.modificador_na}</b></li>`);
   }
@@ -53,6 +60,10 @@ function desgloseTiradaHtml(msg) {
     filas.push(
       `<li>🎙️ Decisión del DM (${etiquetaModificadorDm(msg.modificador_dm)}): <b>${msg.modificador_dm >= 0 ? "+" : ""}${msg.modificador_dm}</b></li>`
     );
+  }
+
+  if (msg.es_ultimate) {
+    filas.push(`<li>✨ Ultimate: <b>x2</b></li>`);
   }
 
   const totalFinal = msg.total_ajustado !== undefined && msg.total_ajustado !== null ? msg.total_ajustado : msg.total;
@@ -480,86 +491,82 @@ function encuentroPendiente(npcsRevelados) {
   return entrada ? { npcId: entrada[0], ...entrada[1].encuentro } : null;
 }
 
-function renderNodoEncuentro(npc, nodo) {
-  document.getElementById("encuentro-avatar").textContent = npc.avatar;
+// se completa con cada "estado": si ya gastó su ultimate en esta fase, el botón
+// queda deshabilitado hasta que el DM avance/retroceda de fase
+let ultimateUsadoFase = false;
+
+function actualizarCabeceraBatalla(npc, encuentro) {
+  document.getElementById("encuentro-npc-carta").innerHTML = cartaNpcHtml(npc);
   document.getElementById("encuentro-nombre").textContent = npc.nombre;
   document.getElementById("encuentro-apodo").textContent = npc.apodo;
-  document.getElementById("encuentro-frase").textContent = `"${nodo.texto}"`;
 
-  const lindura = document.getElementById("encuentro-lindura");
-  lindura.innerHTML =
-    npc.tipo !== "levante"
-      ? ""
-      : npc.puntaje_lindura === null || npc.puntaje_lindura === undefined
-        ? `<p class="lindura-misterio">❓ Estás demasiado en pedo para reconocerlo...</p>`
-        : `<p class="lindura-valor">Atractivo: ${npc.puntaje_lindura} / 10</p>`;
+  const hp = encuentro.hp_npc;
+  const hpMax = encuentro.hp_npc_max || 1;
+  document.getElementById("encuentro-hp-fill").style.width = `${Math.max(0, (hp / hpMax) * 100)}%`;
+  document.getElementById("encuentro-hp-label").textContent = `❤️ ${hp} / ${hpMax}`;
 
-  const dificultadPorRonda = npc.tipo === "levante" ? npc.dificultad_chamuyo : npc.dificultad;
-  document.getElementById("encuentro-dificultad").textContent = `🎯 Dificultad: ${dificultadPorRonda} por ronda`;
-
-  const acciones = document.getElementById("encuentro-actions");
-  const opcionesHtml = nodo.opciones
-    .map((op, i) => `<button type="button" class="btn-opcion-confrontacion" data-idx="${i}">${op.texto}</button>`)
-    .join("");
-
-  const otroStatsHtml =
-    npc.tipo === "levante"
-      ? ""
-      : `<div id="encuentro-otro-stats" class="oculto">
-          <p class="situacion-otro-hint">El DM te dice qué stat tirar:</p>
-          ${Object.keys(NOMBRES_STAT)
-            .map((stat) => `<button type="button" class="btn-stat btn-opcion-otro" data-stat="${stat}">${NOMBRES_STAT[stat]}</button>`)
-            .join("")}
-        </div>`;
-
-  acciones.innerHTML = `
-    ${opcionesHtml}
-    <button type="button" id="btn-encuentro-otro">🎭 Otro (el DM decide)</button>
-    ${otroStatsHtml}
+  const esLevante = npc.tipo === "levante";
+  const valorOMisterio = (v) => (v === null || v === undefined ? "❓" : v);
+  document.getElementById("encuentro-npc-stats").innerHTML = `
+    <span class="batalla-stat">${esLevante ? "🔥 Hot" : "😵 Locura"} ${valorOMisterio(esLevante ? npc.hot : npc.locura)}</span>
+    <span class="batalla-stat">${esLevante ? "💫 Crazy" : "🗿 Dureza"} ${valorOMisterio(esLevante ? npc.crazy : npc.dureza)}</span>
+    <span class="batalla-stat">⚔️ Ataque ${npc.ataque}</span>
+    <span class="batalla-stat">🛡️ Defensa ${npc.defensa}</span>
   `;
 
-  acciones.querySelectorAll(".btn-opcion-confrontacion").forEach((btn) => {
-    btn.addEventListener("click", () => elegirOpcionEncare(npc.id, Number(btn.dataset.idx), null));
-  });
+  document.getElementById("encuentro-ronda").textContent =
+    `Ronda ${Math.min(encuentro.rondas_jugadas + 1, LIMITE_RONDAS_ENCARE)} / ${LIMITE_RONDAS_ENCARE}`;
 
-  document.getElementById("btn-encuentro-otro").addEventListener("click", () => {
-    if (npc.tipo === "levante") {
-      elegirOpcionEncare(npc.id, null, "carisma");
-    } else {
-      document.getElementById("encuentro-otro-stats").classList.remove("oculto");
-    }
-  });
+  const debuffs = Object.entries(encuentro.debuffs_jugador || {});
+  document.getElementById("encuentro-debuffs").innerHTML = debuffs.length
+    ? debuffs.map(([stat, valor]) => `<span class="batalla-debuff">${NOMBRES_STAT[stat]} -${valor}</span>`).join("")
+    : "";
 
-  acciones.querySelectorAll(".btn-opcion-otro").forEach((btn) => {
-    btn.addEventListener("click", () => elegirOpcionEncare(npc.id, null, btn.dataset.stat));
+  if (personajeActual) {
+    document.getElementById("encuentro-jugador-carta").innerHTML = cartaMiniHtml(personajeActual);
+  }
+}
+
+function renderEligiendoAtaque(npc, encuentro) {
+  actualizarCabeceraBatalla(npc, encuentro);
+
+  const acciones = document.getElementById("encuentro-actions");
+  const botonesAtaque = (personajeActual.ataques || [])
+    .map((a, i) => `<button type="button" class="btn-ataque-encare" data-idx="${i}">${a.nombre} <small>(${NOMBRES_STAT[a.stat]})</small></button>`)
+    .join("");
+  const ultimate = personajeActual.ultimate;
+
+  acciones.innerHTML = `
+    ${botonesAtaque}
+    <button type="button" id="btn-ataque-ultimate" class="btn-ataque-ultimate" ${ultimateUsadoFase ? "disabled" : ""}
+      title="${ultimateUsadoFase ? "Ya usaste tu ultimate en esta fase de la noche" : "Duplica el daño de esta ronda — una sola vez por fase"}">
+      ✨ ${ultimate.nombre} <small>(${NOMBRES_STAT[ultimate.stat]})</small>
+    </button>`;
+
+  acciones.querySelectorAll(".btn-ataque-encare").forEach((btn) => {
+    btn.addEventListener("click", () => elegirAtaqueEncare(npc.id, Number(btn.dataset.idx)));
+  });
+  document.getElementById("btn-ataque-ultimate").addEventListener("click", () => {
+    if (!ultimateUsadoFase) elegirAtaqueEncare(npc.id, "ultimate");
   });
 }
 
-/* Entre elegir la opción y que el DM la resuelva, el jugador dice su frase en voz alta
+/* Entre elegir el ataque y que el DM la resuelva, el jugador dice su frase en voz alta
    en la mesa — el server no necesita saber qué dijo, solo que hay una ronda pendiente. */
-function renderEsperandoDm(npc) {
-  document.getElementById("encuentro-avatar").textContent = npc.avatar;
-  document.getElementById("encuentro-nombre").textContent = npc.nombre;
-  document.getElementById("encuentro-apodo").textContent = npc.apodo;
-  document.getElementById("encuentro-frase").textContent = "";
-  document.getElementById("encuentro-lindura").innerHTML = "";
+function renderEsperandoDm(npc, encuentro) {
+  actualizarCabeceraBatalla(npc, encuentro);
   document.getElementById("encuentro-actions").innerHTML = `
     <p class="encuentro-esperando-dm">🎙️ Decilo en voz alta — el DM está evaluando cómo te fue...</p>`;
 }
 
-function elegirOpcionEncare(npcId, opcionIdx, statOtro) {
+function elegirAtaqueEncare(npcId, ataqueIdx) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({
-    type: "elegir_opcion_encare",
-    npc_id: npcId,
-    opcion_idx: opcionIdx === undefined ? null : opcionIdx,
-    stat_otro: statOtro === undefined ? null : statOtro,
-  }));
+  ws.send(JSON.stringify({ type: "elegir_ataque_encare", npc_id: npcId, ataque_idx: ataqueIdx }));
 
-  const npc = ultimosNpcsRevelados[npcId] && ultimosNpcsRevelados[npcId].encuentro.npc;
-  if (npc) {
+  const info = ultimosNpcsRevelados[npcId];
+  if (info && info.encuentro) {
     encuentroEnPantalla = `${npcId}:espera`;
-    renderEsperandoDm(npc);
+    renderEsperandoDm(info.encuentro.npc, info.encuentro);
   }
 }
 
@@ -576,14 +583,19 @@ function renderEncuentro(npcsRevelados) {
     return;
   }
 
-  const clave = `${pendiente.npcId}:${pendiente.pendiente ? "espera" : "nodo"}`;
-  if (clave === encuentroEnPantalla) return;
+  const clave = `${pendiente.npcId}:${pendiente.pendiente ? "espera" : "eligiendo"}`;
+  if (clave === encuentroEnPantalla) {
+    // el sub-estado no cambió, pero HP/debuffs/ronda pueden haber avanzado igual —
+    // se refresca solo la cabecera, sin tocar los botones de acción
+    actualizarCabeceraBatalla(pendiente.npc, pendiente);
+    return;
+  }
   encuentroEnPantalla = clave;
 
   if (pendiente.pendiente) {
-    renderEsperandoDm(pendiente.npc);
+    renderEsperandoDm(pendiente.npc, pendiente);
   } else {
-    renderNodoEncuentro(pendiente.npc, pendiente.nodo);
+    renderEligiendoAtaque(pendiente.npc, pendiente);
   }
   overlay.classList.remove("oculto");
 }
@@ -615,32 +627,46 @@ function animarDadosEncare(callback) {
 function mostrarResultadoEncare(msg) {
   mostrandoResultadoEncuentro = true;
 
+  document.getElementById("encuentro-hp-fill").style.width = `${Math.max(0, (msg.hp_npc / (msg.hp_npc_max || 1)) * 100)}%`;
+  document.getElementById("encuentro-hp-label").textContent = `❤️ ${msg.hp_npc} / ${msg.hp_npc_max}`;
+  document.getElementById("encuentro-ronda").textContent =
+    `Ronda ${Math.min(msg.rondas_jugadas + 1, LIMITE_RONDAS_ENCARE)} / ${LIMITE_RONDAS_ENCARE}`;
+
+  const npc = npcs.find((n) => n.id === msg.npc_id);
+  const magnitudDebuff = npc ? npc.ataque : "?";
+  const golpeTexto = msg.dano > 0
+    ? `💥 <b>${msg.nombre_ataque}</b> le hizo ${msg.dano} de daño${msg.es_ultimate ? " — ¡ultimate!" : ""}.`
+    : `🛡️ <b>${msg.nombre_ataque}</b> no le hizo daño esta vez.`;
+
+  const acciones = document.getElementById("encuentro-actions");
+
   if (!msg.resuelto) {
+    const contraataqueTexto = `😈 Contraataca con <b>${msg.nombre_habilidad_npc}</b>: "${msg.texto_habilidad_npc}"
+      — ${NOMBRES_STAT[msg.stat_debuffado]} -${magnitudDebuff} el resto del encuentro.`;
     // antes esto avanzaba solo a los 2 segundos; ahora hay que tocar "Continuar" —
     // así cada uno lee el desglose (y la mesa reacciona a la tirada) a su propio ritmo
-    document.getElementById("encuentro-actions").innerHTML = `
+    acciones.innerHTML = `
       ${desgloseTiradaHtml(msg)}
-      <p>${msg.respuesta || ""}</p>
+      <p>${golpeTexto}</p>
+      <p>${contraataqueTexto}</p>
       <button type="button" id="btn-continuar-encuentro">Continuar</button>`;
     document.getElementById("btn-continuar-encuentro").addEventListener("click", () => {
       mostrandoResultadoEncuentro = false;
-      const npc = ultimosNpcsRevelados[msg.npc_id] && ultimosNpcsRevelados[msg.npc_id].encuentro.npc;
-      if (npc) {
-        encuentroEnPantalla = `${msg.npc_id}:nodo`;
-        renderNodoEncuentro(npc, msg.siguiente_nodo);
+      const info = ultimosNpcsRevelados[msg.npc_id];
+      if (info && info.encuentro) {
+        encuentroEnPantalla = `${msg.npc_id}:eligiendo`;
+        renderEligiendoAtaque(info.encuentro.npc, info.encuentro);
       }
     });
     return;
   }
 
-  const exitoTexto = msg.exito ? "✅ ¡Salió bien!" : "❌ No salió como esperabas.";
-  if (msg.puntaje_lindura !== undefined) {
-    document.getElementById("encuentro-lindura").innerHTML = `<p class="lindura-valor">Atractivo real: ${msg.puntaje_lindura} / 10</p>`;
-  }
-  document.getElementById("encuentro-actions").innerHTML = `
+  const exitoTexto = msg.exito ? "✅ ¡Lo conquistaste!" : "❌ No lo lograste a tiempo.";
+  acciones.innerHTML = `
     ${desgloseTiradaHtml(msg)}
-    <p>${msg.respuesta ? `${msg.respuesta}<br>` : ""}Acumulado ${msg.acumulado} vs dificultad ${msg.dificultad_total}.</p>
+    <p>${golpeTexto}</p>
     <p>${exitoTexto}</p>
+    ${msg.exito ? `<p class="lindura-valor">🏆 +${msg.puntaje} puntos</p>` : ""}
     <button type="button" id="btn-cerrar-encuentro">Cerrar</button>`;
   document.getElementById("btn-cerrar-encuentro").addEventListener("click", cerrarEncuentro);
 }
@@ -737,6 +763,7 @@ function conectarWsJugador(playerId) {
       renderPrendas(msg.prendas);
       renderModoCaos(msg.modo_caos_activo);
       renderDebilidad(msg.debilidad_activa);
+      ultimateUsadoFase = msg.ultimate_usado_fase;
       renderSituacion(msg.situacion_actual, msg.jugadores_en_mapa);
       document.getElementById("fase-actual").textContent = NOMBRES_FASE[msg.fase] || msg.fase;
       aplicarFase(msg.fase);
@@ -863,6 +890,7 @@ function cerrarIntro() {
 
   personajes = await cargarPersonajes();
   await cargarCartas();
+  await cargarCartasNpc();
 
   const playerIdGuardado = localStorage.getItem("player_id");
   const nombreGuardado = localStorage.getItem("nombre");

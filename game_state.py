@@ -27,12 +27,16 @@ TIPOS_ENCUENTRO = {"levante", "confrontacion"}
 UMBRAL_MISTERIO_LEVANTE = 8  # NA a partir del cual el NPC de levante llega sin revelar
 STATS_JUGABLES = {"carisma", "aguante", "astucia", "suerte"}
 OTRO_OPCION = "Otro (decide DM)"  # opción libre de una situación: el jugador tira el stat que el DM le diga en voz alta
+LIMITE_RONDAS_ENCARE = 5  # tope de rondas de un encare: sin bajar el HP del NPC a 0 para entonces, se pierde
 
 MAPA_VACIO = {"id": None, "nombre": "", "zonas": []}
 
 CARTAS_DIR = DATA_DIR / "personajes_cartas"
 CARTAS_WEB_DIR = CARTAS_DIR / "web"
 EXTENSIONES_CARTA = (".webp", ".png", ".jpg", ".jpeg")
+
+NPC_CARTAS_DIR = DATA_DIR / "npc_cartas"
+NPC_CARTAS_WEB_DIR = NPC_CARTAS_DIR / "web"
 
 
 def _normalizar_nombre_carta(nombre: str) -> str:
@@ -61,6 +65,30 @@ def cartas_disponibles() -> dict[str, str]:
             if personaje_id is None:
                 continue
             encontradas[personaje_id] = f"/data/{archivo.relative_to(DATA_DIR).as_posix()}"
+
+    return encontradas
+
+
+def npc_cartas_disponibles() -> dict[str, str]:
+    """Mapea npc_id -> URL de su carta ilustrada, para los que tengan una.
+
+    Mismo mecanismo que `cartas_disponibles()` pero para NPCs de encare (levante/
+    confrontación): los que no tengan archivo en `data/npc_cartas/` quedan afuera del
+    dict y el frontend les dibuja una carta con sus stats en su lugar (ver carta.js).
+    """
+    ids_por_normalizado = {_normalizar_nombre_carta(n["id"]): n["id"] for n in NPCS}
+    encontradas: dict[str, str] = {}
+
+    for carpeta in (NPC_CARTAS_DIR, NPC_CARTAS_WEB_DIR):
+        if not carpeta.is_dir():
+            continue
+        for archivo in sorted(carpeta.iterdir()):
+            if not archivo.is_file() or archivo.suffix.lower() not in EXTENSIONES_CARTA:
+                continue
+            npc_id = ids_por_normalizado.get(_normalizar_nombre_carta(archivo.stem))
+            if npc_id is None:
+                continue
+            encontradas[npc_id] = f"/data/{archivo.relative_to(DATA_DIR).as_posix()}"
 
     return encontradas
 
@@ -180,6 +208,9 @@ def crear_jugador(nombre: str, personaje_id: str) -> str:
         "zona_actual": zonas[0]["id"] if zonas else None,
         "puntaje": 0,
         "historial": [],
+        # el ultimate del personaje se puede usar una sola vez por fase de la noche —
+        # se resetea en _entrar_a_fase, no acá
+        "ultimate_usado_fase": False,
     }
     return player_id
 
@@ -336,14 +367,20 @@ def iniciar_encuentro(npc_id: str | None, jugador_objetivo: str) -> str:
     elif not puede_iniciar_encuentro(npc_id):
         raise ValueError(f"{npc_id} no es un NPC de levante ni de confrontación")
 
+    npc = get_npc(npc_id)
     game_state["npcs_revelados"][npc_id]["encuentro"] = {
         "jugador_objetivo": jugador_objetivo,
         "resuelto": False,
-        "nodo_actual": get_npc(npc_id)["arbol"]["inicio"],
-        "acumulado": 0,
+        "exito": None,
         "rondas_jugadas": 0,
+        "hp_npc": npc["hp"],
+        "hp_npc_max": npc["hp"],
+        # stat del jugador -> magnitud del malus activo (npc["ataque"] de quien lo aplicó
+        # último). Dura el resto del encuentro, no se acumula con más contraataques al
+        # mismo stat — el nuevo pisa al viejo.
+        "debuffs_jugador": {},
         "tiradas": [],
-        # la opción que el jugador ya eligió para esta ronda, esperando que el DM la
+        # el ataque que el jugador ya eligió para esta ronda, esperando que el DM la
         # resuelva con `resolver_ronda_encare` (ver esa función) — None mientras el
         # jugador no eligió nada todavía
         "pendiente": None,
@@ -359,7 +396,8 @@ def npc_con_misterio(npc: dict, jugador: dict) -> dict:
             "apodo": "???",
             "avatar": "❓",
             "frase_reveal": "Alguien te llama la atención, pero estás demasiado en pedo para verlo bien.",
-            "puntaje_lindura": None,
+            "hot": None,
+            "crazy": None,
         }
     return npc
 
@@ -385,20 +423,14 @@ def npcs_revelados_para_jugador(player_id: str) -> dict:
         if encuentro and jugador and encuentro["jugador_objetivo"] == player_id:
             # el misterio cae al resolver el intento, sin importar el NA (sección 2 del plan)
             npc_visible = npc if encuentro["resuelto"] else npc_con_misterio(npc, jugador)
-            # el árbol completo (con las respuestas y ramas futuras) es spoiler: el jugador
-            # solo recibe el nodo actual, sin las respuestas ni el destino de cada opción
-            npc_sin_arbol = {k: v for k, v in npc_visible.items() if k != "arbol"}
-            # "pendiente" en crudo (con stat/respuesta/siguiente) es para uso interno del
-            # DM al resolver la ronda — el jugador solo necesita saber si hay una pendiente
+            # las habilidades de contraataque son spoiler (qué debuff viene): el jugador
+            # solo ve el resultado cuando el DM elige una, no el listado completo de antemano
+            npc_sin_habilidades = {k: v for k, v in npc_visible.items() if k != "habilidades"}
+            # "pendiente" en crudo (con el ataque elegido) es para uso interno del DM al
+            # resolver la ronda — el jugador solo necesita saber si hay una pendiente
             hay_pendiente = encuentro["pendiente"] is not None
             encuentro_sin_pendiente_crudo = {k: v for k, v in encuentro.items() if k != "pendiente"}
-            visible = {**encuentro_sin_pendiente_crudo, "npc": npc_sin_arbol, "pendiente": hay_pendiente}
-            if not encuentro["resuelto"] and not hay_pendiente:
-                nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
-                visible["nodo"] = {
-                    "texto": nodo["texto"],
-                    "opciones": [{"texto": o["texto"], "stat": o["stat"]} for o in nodo["opciones"]],
-                }
+            visible = {**encuentro_sin_pendiente_crudo, "npc": npc_sin_habilidades, "pendiente": hay_pendiente}
 
         resultado[npc_id] = {"zona": info.get("zona"), "encuentro": visible}
 
@@ -422,32 +454,42 @@ def _npc_de_encuentro_valido(npc_id: str, player_id: str) -> tuple[dict, dict]:
     return npc, encuentro
 
 
-def elegir_opcion_encare(player_id: str, npc_id: str, opcion_idx: int | None = None, stat_otro: str | None = None) -> dict:
-    """Primer paso de una ronda de encare: el jugador elige qué opción intenta.
+def elegir_ataque_encare(player_id: str, npc_id: str, ataque_idx: int | str) -> dict:
+    """Primer paso de una ronda de encare: el jugador elige qué ataque de su propio
+    personaje intenta — uno de sus 3 ataques normales (`ataque_idx` 0-2) o su ultimate
+    (`ataque_idx="ultimate"`, una sola vez por fase de la noche).
 
     No tira los dados todavía — a la mesa, en este momento el jugador dice en voz alta
-    su frase/movida libremente, y recién después el DM juzga qué tan bien le salió con
-    `resolver_ronda_encare` (que aplica el `modificador_dm` y ahí sí tira). Deja la
-    elección en `encuentro["pendiente"]` hasta que eso pase.
+    su frase/movida libremente, y recién después el DM juzga qué tan bien le salió y
+    elige el contraataque del NPC con `resolver_ronda_encare` (que ahí sí tira). Deja
+    la elección en `encuentro["pendiente"]` hasta que eso pase.
     """
-    npc, encuentro = _npc_de_encuentro_valido(npc_id, player_id)
+    _npc, encuentro = _npc_de_encuentro_valido(npc_id, player_id)
     if encuentro["pendiente"] is not None:
-        raise ValueError("Ya elegiste una opción para esta ronda, estás esperando al DM")
+        raise ValueError("Ya elegiste un ataque para esta ronda, estás esperando al DM")
 
-    nodo = npc["arbol"]["nodos"][encuentro["nodo_actual"]]
+    jugador = game_state["jugadores"][player_id]
+    personaje = get_personaje(jugador["personaje_id"])
 
-    if stat_otro is not None:
-        if stat_otro not in STATS_JUGABLES:
-            raise ValueError(f"stat inválido: {stat_otro}")
-        stat, respuesta, siguiente = stat_otro, None, None
+    if ataque_idx == "ultimate":
+        if jugador["ultimate_usado_fase"]:
+            raise ValueError("Ya usaste tu ultimate en esta fase de la noche")
+        ataque = personaje["ultimate"]
+        es_ultimate = True
     else:
-        if opcion_idx is None or not (0 <= opcion_idx < len(nodo["opciones"])):
-            raise ValueError(f"opcion_idx inválido para este nodo: {opcion_idx}")
-        opcion = nodo["opciones"][opcion_idx]
-        stat, respuesta, siguiente = opcion["stat"], opcion["respuesta"], opcion["siguiente"]
+        ataques = personaje["ataques"]
+        if not isinstance(ataque_idx, int) or not (0 <= ataque_idx < len(ataques)):
+            raise ValueError(f"ataque_idx inválido: {ataque_idx}")
+        ataque = ataques[ataque_idx]
+        es_ultimate = False
 
-    encuentro["pendiente"] = {"stat": stat, "respuesta": respuesta, "siguiente": siguiente}
-    return {"npc_id": npc_id, "jugador_objetivo": player_id, "stat": stat}
+    encuentro["pendiente"] = {
+        "ataque_idx": ataque_idx,
+        "stat": ataque["stat"],
+        "nombre": ataque["nombre"],
+        "es_ultimate": es_ultimate,
+    }
+    return {"npc_id": npc_id, "jugador_objetivo": player_id, "stat": ataque["stat"]}
 
 
 def _npc_de_ronda_pendiente(npc_id: str) -> tuple[dict, dict]:
@@ -465,72 +507,113 @@ def _npc_de_ronda_pendiente(npc_id: str) -> tuple[dict, dict]:
     return npc, encuentro
 
 
-def resolver_ronda_encare(npc_id: str, modificador_dm: int = 0) -> dict:
+def resolver_ronda_encare(
+    npc_id: str,
+    modificador_dm: int = 0,
+    habilidad_npc_idx: int | str | None = None,
+    stat_objetivo_libre: str | None = None,
+    texto_libre: str | None = None,
+) -> dict:
     """Segundo paso de una ronda de encare: el DM juzga cómo estuvo lo que dijo el
-    jugador y tira los dados, con `modificador_dm` como bonus/malus a esa tirada (sube
-    o baja la dificultad real de esa ronda sin tocar la escala de `dificultad_chamuyo`/
-    `dificultad` del NPC). Se suma al `acumulado` y, si la opción elegida no tenía
-    `siguiente` nodo, ahí se resuelve el encuentro completo (dificultad total = escala
-    del NPC por rondas jugadas) y se registra el resultado en el puntaje del jugador.
+    jugador (con `modificador_dm`, mismo mecanismo que siempre) y además elige con qué
+    habilidad contraataca el NPC esta ronda — una de las 3 fijas de `npc["habilidades"]`
+    (`habilidad_npc_idx` 0-2) o una libre que el DM improvisa (`habilidad_npc_idx="libre"`,
+    con `texto_libre` y `stat_objetivo_libre` a mano). Ahí sí tira los dados: el daño al
+    NPC sale de `total_ajustado - npc["defensa"]`, y el contraataque del NPC deja un malus
+    de `npc["ataque"]` sobre el stat que eligió atacar (dura el resto del encuentro, no
+    se acumula con contraataques previos al mismo stat). El encuentro se resuelve cuando
+    el HP del NPC llega a 0 (éxito) o se llega a `LIMITE_RONDAS_ENCARE` rondas sin lograrlo
+    (fracaso) — en cualquiera de los dos casos se registra el resultado en el puntaje.
     """
     npc, encuentro = _npc_de_ronda_pendiente(npc_id)
     pendiente = encuentro["pendiente"]
-    stat, respuesta, siguiente = pendiente["stat"], pendiente["respuesta"], pendiente["siguiente"]
+    stat, nombre_ataque, es_ultimate = pendiente["stat"], pendiente["nombre"], pendiente["es_ultimate"]
     player_id = encuentro["jugador_objetivo"]
+
+    if habilidad_npc_idx == "libre":
+        if stat_objetivo_libre not in STATS_JUGABLES:
+            raise ValueError(f"stat inválido: {stat_objetivo_libre}")
+        stat_debuffado = stat_objetivo_libre
+        nombre_habilidad_npc = "Movida improvisada"
+        texto_habilidad_npc = texto_libre or ""
+    else:
+        habilidades = npc["habilidades"]
+        if not isinstance(habilidad_npc_idx, int) or not (0 <= habilidad_npc_idx < len(habilidades)):
+            raise ValueError(f"habilidad_npc_idx inválido: {habilidad_npc_idx}")
+        habilidad = habilidades[habilidad_npc_idx]
+        stat_debuffado = habilidad["stat_objetivo"]
+        nombre_habilidad_npc = habilidad["nombre"]
+        texto_habilidad_npc = habilidad["texto"]
 
     jugador = game_state["jugadores"][player_id]
     personaje = get_personaje(jugador["personaje_id"])
     desglose = desglose_stat(jugador, personaje, stat)
-    resultado = {**dice.tirar(jugador["na"], stat, desglose["stat_valor"]), **desglose}
-    total_ajustado = resultado["total"] + modificador_dm
+    debuff_valor = encuentro["debuffs_jugador"].get(stat, 0)
+    stat_valor_efectivo = desglose["stat_valor"] - debuff_valor
+    tirada = dice.tirar(jugador["na"], stat, stat_valor_efectivo)
+
+    total_base = tirada["total"] + modificador_dm
+    total_ajustado = total_base * 2 if es_ultimate else total_base
+    dano = max(0, total_ajustado - npc["defensa"])
+
+    if es_ultimate:
+        jugador["ultimate_usado_fase"] = True
 
     encuentro["pendiente"] = None
-    encuentro["acumulado"] += total_ajustado
+    encuentro["hp_npc"] = max(0, encuentro["hp_npc"] - dano)
+    encuentro["debuffs_jugador"][stat_debuffado] = npc["ataque"]
     encuentro["rondas_jugadas"] += 1
-    tirada = {**resultado, "modificador_dm": modificador_dm, "total_ajustado": total_ajustado}
-    encuentro["tiradas"].append(tirada)
 
-    if siguiente is not None:
-        encuentro["nodo_actual"] = siguiente
-        nodo_siguiente = npc["arbol"]["nodos"][siguiente]
-        return {
-            **tirada,
-            "resuelto": False,
-            "npc_id": npc_id,
-            "jugador_objetivo": player_id,
-            "stat": stat,
-            "respuesta": respuesta,
-            "rondas_jugadas": encuentro["rondas_jugadas"],
-            "siguiente_nodo": {
-                "texto": nodo_siguiente["texto"],
-                "opciones": [{"texto": o["texto"], "stat": o["stat"]} for o in nodo_siguiente["opciones"]],
-            },
-        }
-
-    es_levante = npc["tipo"] == "levante"
-    dificultad_por_ronda = npc["dificultad_chamuyo"] if es_levante else npc["dificultad"]
-    dificultad_total = dificultad_por_ronda * encuentro["rondas_jugadas"]
-    exito = encuentro["acumulado"] >= dificultad_total
-    encuentro["resuelto"] = True
-
-    puntos = (npc["puntaje_lindura"] if exito else 0) if es_levante else (1 if exito else 0)
-    _registrar_resultado(player_id, npc["tipo"], npc["nombre"], exito, puntos)
-
-    respuesta_final = {
+    resultado_ronda = {
         **tirada,
-        "resuelto": True,
+        "stat_base": desglose["stat_base"],
+        "debilidad_nombre": desglose["debilidad_nombre"],
+        "debilidad_modificador": desglose["debilidad_modificador"],
+        "debuff_valor": debuff_valor or None,
+        "modificador_dm": modificador_dm,
+        "es_ultimate": es_ultimate,
+        "total_ajustado": total_ajustado,
+        "dano": dano,
+    }
+    encuentro["tiradas"].append({**resultado_ronda, "nombre_ataque": nombre_ataque})
+
+    resuelto = encuentro["hp_npc"] <= 0 or encuentro["rondas_jugadas"] >= LIMITE_RONDAS_ENCARE
+    respuesta = {
+        **resultado_ronda,
+        "resuelto": resuelto,
         "npc_id": npc_id,
         "jugador_objetivo": player_id,
         "stat": stat,
-        "exito": exito,
-        "acumulado": encuentro["acumulado"],
-        "dificultad_total": dificultad_total,
-        "respuesta": respuesta,
+        "nombre_ataque": nombre_ataque,
+        "nombre_habilidad_npc": nombre_habilidad_npc,
+        "texto_habilidad_npc": texto_habilidad_npc,
+        "stat_debuffado": stat_debuffado,
+        "hp_npc": encuentro["hp_npc"],
+        "hp_npc_max": encuentro["hp_npc_max"],
         "rondas_jugadas": encuentro["rondas_jugadas"],
     }
-    if es_levante:
-        respuesta_final["puntaje_lindura"] = npc["puntaje_lindura"]
-    return respuesta_final
+
+    if not resuelto:
+        return respuesta
+
+    exito = encuentro["hp_npc"] <= 0
+    encuentro["resuelto"] = True
+    encuentro["exito"] = exito
+
+    es_levante = npc["tipo"] == "levante"
+    if exito:
+        stat_a = npc["hot"] if es_levante else npc["locura"]
+        stat_b = npc["crazy"] if es_levante else npc["dureza"]
+        puntaje_base = round((stat_a + stat_b) / 2)
+        bonus_eficiencia = max(0, LIMITE_RONDAS_ENCARE - encuentro["rondas_jugadas"])
+        puntos = puntaje_base + bonus_eficiencia
+    else:
+        puntos = 0
+
+    _registrar_resultado(player_id, npc["tipo"], npc["nombre"], exito, puntos)
+    respuesta["exito"] = exito
+    respuesta["puntaje"] = puntos
+    return respuesta
 
 
 def configurar_dificultad_evento(titulo: str, dificultad: int | None) -> None:
@@ -673,6 +756,10 @@ def _entrar_a_fase(nueva_fase: str) -> None:
     habilitados = game_state["mapas_habilitados"].get(nueva_fase)
     _aplicar_mapa(elegir_mapa_random(nueva_fase, habilitados))
 
+    # el ultimate de encare es 1 uso por fase, no por toda la noche
+    for jugador in game_state["jugadores"].values():
+        jugador["ultimate_usado_fase"] = False
+
     if nueva_fase == "after":
         # Leyenda Urbana (NA 10) vuelve a Modo Caos (NA 6) al empezar el After — sección 5.4 del plan
         for jugador in game_state["jugadores"].values():
@@ -713,4 +800,10 @@ def registrar_tirada(player_id: str, stat: str, resultado: dict, contexto: str |
         "modificador_dm": resultado.get("modificador_dm"),
         "debilidad_nombre": resultado.get("debilidad_nombre"),
         "debilidad_modificador": resultado.get("debilidad_modificador"),
+        # solo presentes en rondas de encare: cuánto restó el debuff activo a esta
+        # tirada, y cuánto daño real le hizo al NPC después de su Defensa — sin esto
+        # el log del DM solo mostraba el total crudo, y "total - Defensa" no es obvio
+        # a simple vista (ver el desglose completo en desgloseTirada, dm.js)
+        "debuff_valor": resultado.get("debuff_valor"),
+        "dano": resultado.get("dano"),
     })

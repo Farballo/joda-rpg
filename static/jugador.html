@@ -141,14 +141,29 @@
   </div>
 
   <div id="encuentro-overlay" class="oculto">
-    <div class="npc-card-popup encuentro-popup">
-      <div class="npc-card-avatar" id="encuentro-avatar"></div>
-      <div class="eyebrow" id="encuentro-eyebrow">TE TOCA A VOS</div>
-      <h2 id="encuentro-nombre"></h2>
-      <p class="npc-card-apodo" id="encuentro-apodo"></p>
-      <p id="encuentro-frase"></p>
-      <div id="encuentro-lindura"></div>
-      <p id="encuentro-dificultad" class="encuentro-dificultad"></p>
+    <div class="batalla-popup">
+      <div class="batalla-npc">
+        <div class="batalla-npc-carta" id="encuentro-npc-carta"></div>
+        <div class="batalla-npc-info">
+          <div class="eyebrow">TE ENCARA</div>
+          <h2 id="encuentro-nombre"></h2>
+          <p class="npc-card-apodo" id="encuentro-apodo"></p>
+          <div class="batalla-hp-barra"><div class="batalla-hp-fill" id="encuentro-hp-fill"></div></div>
+          <p class="batalla-hp-label" id="encuentro-hp-label"></p>
+          <div class="batalla-stats" id="encuentro-npc-stats"></div>
+        </div>
+      </div>
+
+      <div class="batalla-medio">
+        <span class="batalla-ronda" id="encuentro-ronda"></span>
+        <div class="batalla-debuffs" id="encuentro-debuffs"></div>
+      </div>
+
+      <div class="batalla-jugador">
+        <div class="batalla-jugador-carta" id="encuentro-jugador-carta"></div>
+        <span class="batalla-jugador-nombre">Vos</span>
+      </div>
+
       <div class="npc-card-actions" id="encuentro-actions"></div>
     </div>
   </div>

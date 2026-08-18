@@ -19,7 +19,7 @@ from game_state import (
     crear_partida,
     desactivar_debilidad,
     desglose_stat,
-    elegir_opcion_encare,
+    elegir_ataque_encare,
     elegir_opcion_situacion,
     expulsar_jugador,
     game_state,
@@ -28,6 +28,7 @@ from game_state import (
     iniciar_encuentro,
     iniciar_partida,
     mover_jugador,
+    npc_cartas_disponibles,
     npcs_revelados_para_jugador,
     ocultar_npc,
     registrar_tirada,
@@ -112,6 +113,7 @@ def estado_jugador_msg(player_id: str):
         "na": jugador["na"],
         "modo_caos_activo": jugador["modo_caos_activo"],
         "debilidad_activa": jugador["debilidad_activa"],
+        "ultimate_usado_fase": jugador["ultimate_usado_fase"],
         "prendas": jugador["prendas_activas"],
         "puntaje": jugador["puntaje"],
         "historial": jugador["historial"],
@@ -229,6 +231,12 @@ async def get_jugador():
 async def get_cartas():
     """personaje_id -> URL de su carta ilustrada. Los que faltan no vienen en el dict."""
     return cartas_disponibles()
+
+
+@app.get("/api/npc_cartas")
+async def get_npc_cartas():
+    """npc_id -> URL de su carta ilustrada. Los que faltan no vienen en el dict."""
+    return npc_cartas_disponibles()
 
 
 @app.get("/api/ip")
@@ -433,7 +441,13 @@ async def ws_dm(websocket: WebSocket):
                 npc_id = msg.get("npc_id")
 
                 try:
-                    resultado = resolver_ronda_encare(npc_id, msg.get("modificador_dm", 0))
+                    resultado = resolver_ronda_encare(
+                        npc_id,
+                        msg.get("modificador_dm", 0),
+                        msg.get("habilidad_npc_idx"),
+                        msg.get("stat_objetivo_libre"),
+                        msg.get("texto_libre"),
+                    )
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue
@@ -562,11 +576,9 @@ async def ws_player(websocket: WebSocket, player_id: str):
                 await broadcast_estado_dm()
                 await broadcast_ocultar_carta_npc(npc_id)
 
-            elif msg.get("type") == "elegir_opcion_encare":
+            elif msg.get("type") == "elegir_ataque_encare":
                 try:
-                    elegir_opcion_encare(
-                        player_id, msg.get("npc_id"), msg.get("opcion_idx"), msg.get("stat_otro")
-                    )
+                    elegir_ataque_encare(player_id, msg.get("npc_id"), msg.get("ataque_idx"))
                 except ValueError as e:
                     await websocket.send_json({"type": "error", "detail": str(e)})
                     continue

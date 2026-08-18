@@ -166,3 +166,88 @@ function cartaThumbHtml(personaje) {
 
   return `<span class="carta-thumb-monograma">${esc(monograma(personaje))}</span>`;
 }
+
+/* ==========================================================================
+ * Carta de NPC de encare (levante/confrontación), para la pantalla de batalla.
+ * Mismo patrón que la carta de personaje: si hay ilustración en
+ * data/npc_cartas/ se usa esa (ver GET /api/npc_cartas); si no, se dibuja una
+ * con los stats de npcs.json (hot/crazy o locura/dureza, ataque, defensa, hp).
+ * ========================================================================== */
+
+let cartasPorNpc = {};
+
+async function cargarCartasNpc() {
+  try {
+    const res = await fetch("/api/npc_cartas");
+    cartasPorNpc = await res.json();
+  } catch {
+    cartasPorNpc = {}; // sin cartas ilustradas dibujamos todas, el juego sigue
+  }
+  return cartasPorNpc;
+}
+
+function urlCartaNpc(npcId) {
+  return cartasPorNpc[npcId] || null;
+}
+
+function npcCartaDibujadaHtml(npc) {
+  const esLevante = npc.tipo === "levante";
+  const statATxt = esLevante ? "HOT" : "LOCURA";
+  const statBTxt = esLevante ? "CRAZY" : "DUREZA";
+  const statAVal = esLevante ? npc.hot : npc.locura;
+  const statBVal = esLevante ? npc.crazy : npc.dureza;
+  const valorOMisterio = (v) => (v === null || v === undefined ? "❓" : v);
+
+  return `
+    <div class="carta-lienzo">
+      <div class="carta-cabecera">
+        <span class="carta-titulo">${esLevante ? "LEVANTE" : "CONFRONTACIÓN"}</span>
+        <span class="carta-copa">${esLevante ? "💘" : "😤"}</span>
+      </div>
+
+      <div class="carta-retrato">
+        <span class="carta-monograma">${esc(npc.avatar)}</span>
+        <div class="carta-nombre-banner">${esc(npc.nombre).toUpperCase()}</div>
+      </div>
+
+      <div class="carta-frase">“${esc(npc.frase_reveal)}”</div>
+
+      <div class="carta-stats">
+        <div class="carta-stat">
+          <span class="carta-stat-label">${statATxt}</span>
+          <span class="carta-stat-valor">${valorOMisterio(statAVal)}</span>
+        </div>
+        <div class="carta-stat">
+          <span class="carta-stat-label">${statBTxt}</span>
+          <span class="carta-stat-valor">${valorOMisterio(statBVal)}</span>
+        </div>
+        <div class="carta-stat">
+          <span class="carta-stat-label">ATAQUE</span>
+          <span class="carta-stat-valor">${npc.ataque}</span>
+        </div>
+        <div class="carta-stat">
+          <span class="carta-stat-label">DEFENSA</span>
+          <span class="carta-stat-valor">${npc.defensa}</span>
+        </div>
+      </div>
+
+      <div class="carta-pie">
+        <span>HP ${npc.hp}</span>
+        <span>© NOCHE DE BOLICHE</span>
+      </div>
+    </div>`;
+}
+
+/** Carta completa de NPC. Usa la ilustración si existe; si no, la dibuja. */
+function cartaNpcHtml(npc, opciones = {}) {
+  const { clases = "" } = opciones;
+  const url = urlCartaNpc(npc.id);
+  const cuerpo = url
+    ? `<img class="carta-ilustrada" src="${esc(url)}" alt="${esc(npc.nombre)}" loading="lazy" decoding="async">`
+    : npcCartaDibujadaHtml(npc);
+
+  return `
+    <article class="carta carta-npc ${url ? "carta-con-foto" : "carta-dibujada"} ${clases}" data-npc="${esc(npc.id)}">
+      ${cuerpo}
+    </article>`;
+}

@@ -34,15 +34,38 @@ def unirse(client, nombre="Facu", personaje_id="intenso") -> str:
     return res.json()["player_id"]
 
 
-def elegir_y_resolver(ws_dm, ws_jugador, npc_id, opcion_idx=None, stat_otro=None, modificador_dm=0):
-    """Una ronda completa de encare: el jugador elige la opción (a la mesa, dice su frase
-    en voz alta) y el DM la resuelve con un `modificador_dm` (sección 2 del plan, "Ajuste
-    de dificultad en vivo"). Devuelve el `resultado_encare` que le llega al jugador."""
-    ws_jugador.send_json({"type": "elegir_opcion_encare", "npc_id": npc_id, "opcion_idx": opcion_idx, "stat_otro": stat_otro})
+def _forzar_total(monkeypatch, total):
+    """Reemplaza dice.tirar por una tirada de resultado fijo, para no depender del azar
+    al testear el desenlace de un encare (HP del NPC, límite de rondas, etc)."""
+
+    def tirar_falso(na, stat, stat_valor, tirador=None):
+        return {
+            "tipo": "normal",
+            "dados_tirados": [3, 3],
+            "suma_dados": 6,
+            "stat_valor": stat_valor,
+            "modificador_na": 0,
+            "total": total,
+        }
+
+    monkeypatch.setattr(gs.dice, "tirar", tirar_falso)
+
+
+def elegir_y_resolver(ws_dm, ws_jugador, npc_id, ataque_idx=0, modificador_dm=0, habilidad_npc_idx=0):
+    """Una ronda completa de encare: el jugador elige el ataque (a la mesa, dice su frase
+    en voz alta), y el DM la resuelve con un `modificador_dm` y elige con qué habilidad
+    contraataca el NPC (sección 2 del plan, "Ajuste de dificultad en vivo"). Devuelve el
+    `resultado_encare` que le llega al jugador."""
+    ws_jugador.send_json({"type": "elegir_ataque_encare", "npc_id": npc_id, "ataque_idx": ataque_idx})
     ws_jugador.receive_json()  # estado propio, con la ronda pendiente
     ws_dm.receive_json()  # estado_completo del DM
 
-    ws_dm.send_json({"type": "resolver_ronda_encare", "npc_id": npc_id, "modificador_dm": modificador_dm})
+    ws_dm.send_json({
+        "type": "resolver_ronda_encare",
+        "npc_id": npc_id,
+        "modificador_dm": modificador_dm,
+        "habilidad_npc_idx": habilidad_npc_idx,
+    })
     resultado = ws_jugador.receive_json()  # resultado_encare
     ws_jugador.receive_json()  # estado post-ronda
     ws_dm.receive_json()  # estado_completo del DM
@@ -141,7 +164,7 @@ def test_iniciar_encuentro_llega_solo_al_jugador_objetivo(client):
             encuentro = estado1["npcs_revelados"]["sofia"]["encuentro"]
             assert encuentro["jugador_objetivo"] == p1
             assert encuentro["resuelto"] is False
-            assert encuentro["npc"]["puntaje_lindura"] == 6
+            assert encuentro["npc"]["hot"] == 6
 
     # p2 no recibió nada nuevo: para él sofía sigue revelada pero sin encuentro
     assert gs.npcs_revelados_para_jugador(p2)["sofia"]["encuentro"] is None
@@ -277,8 +300,9 @@ def test_el_bloqueo_es_global_y_no_por_jugador(client):
         assert err["type"] == "error"
 
 
-def test_resolver_el_encuentro_desbloquea_el_siguiente(client):
-    """morocho_after es de 1 sola ronda: una tirada alcanza para resolverlo."""
+def test_resolver_el_encuentro_desbloquea_el_siguiente(client, monkeypatch):
+    """Con un golpe que le baja todo el HP de una, el encuentro queda resuelto ahí."""
+    _forzar_total(monkeypatch, 999)
     p1 = unirse(client, "Facu", "intenso")
     p2 = unirse(client, "Juli", "rama")
     gs.revelar_npc("morocho_after", zona_actual())
@@ -290,7 +314,7 @@ def test_resolver_el_encuentro_desbloquea_el_siguiente(client):
         ws_dm.receive_json()
         ws1.receive_json()
 
-        resultado = elegir_y_resolver(ws_dm, ws1, "morocho_after", opcion_idx=0)
+        resultado = elegir_y_resolver(ws_dm, ws1, "morocho_after", ataque_idx=0)
         assert resultado["type"] == "resultado_encare"
         assert resultado["resuelto"] is True
 
@@ -321,7 +345,8 @@ def test_ocultar_el_npc_cancela_su_encuentro_y_desbloquea(client):
 # --- un NPC de encuentro no se agota ----------------------------------------
 
 
-def test_npc_resuelto_se_puede_reasignar_a_otro_jugador(client):
+def test_npc_resuelto_se_puede_reasignar_a_otro_jugador(client, monkeypatch):
+    _forzar_total(monkeypatch, 999)
     p1 = unirse(client, "Facu", "intenso")
     p2 = unirse(client, "Juli", "rama")
     gs.revelar_npc("morocho_after", zona_actual())
@@ -331,7 +356,7 @@ def test_npc_resuelto_se_puede_reasignar_a_otro_jugador(client):
          client.websocket_connect(f"/ws/player/{p1}") as ws1:
         ws_dm.receive_json()
         ws1.receive_json()
-        elegir_y_resolver(ws_dm, ws1, "morocho_after", opcion_idx=0)
+        elegir_y_resolver(ws_dm, ws1, "morocho_after", ataque_idx=0)
 
         ws_dm.send_json({"type": "iniciar_encuentro", "npc_id": "morocho_after", "jugador_objetivo": p2})
         msg = ws_dm.receive_json()
@@ -341,7 +366,8 @@ def test_npc_resuelto_se_puede_reasignar_a_otro_jugador(client):
         assert encuentro["resuelto"] is False
 
 
-def test_npc_resuelto_se_puede_reasignar_al_mismo_jugador(client):
+def test_npc_resuelto_se_puede_reasignar_al_mismo_jugador(client, monkeypatch):
+    _forzar_total(monkeypatch, 999)
     player_id = unirse(client)
     gs.revelar_npc("morocho_after", zona_actual())
     gs.iniciar_encuentro("morocho_after", player_id)
@@ -350,7 +376,7 @@ def test_npc_resuelto_se_puede_reasignar_al_mismo_jugador(client):
          client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws_dm.receive_json()
         ws.receive_json()
-        elegir_y_resolver(ws_dm, ws, "morocho_after", opcion_idx=0)
+        elegir_y_resolver(ws_dm, ws, "morocho_after", ataque_idx=0)
 
     gs.iniciar_encuentro("morocho_after", player_id)
     assert gs.game_state["npcs_revelados"]["morocho_after"]["encuentro"]["resuelto"] is False
@@ -382,9 +408,9 @@ def test_misterio_de_lindura_solo_afecta_la_carta_del_encuentro(client):
     visto = gs.npcs_revelados_para_jugador(player_id)["sofia"]
     # el NPC sigue en el mapa como para todos (el reveal fue público)
     assert visto["zona"] == zona_actual()
-    # pero la carta del encuentro llega sin identidad ni puntaje
+    # pero la carta del encuentro llega sin identidad ni stats de puntaje
     assert visto["encuentro"]["npc"]["nombre"] == "❓"
-    assert visto["encuentro"]["npc"]["puntaje_lindura"] is None
+    assert visto["encuentro"]["npc"]["hot"] is None
 
 
 def test_sin_na_alto_el_encuentro_de_levante_llega_revelado(client):
@@ -394,11 +420,12 @@ def test_sin_na_alto_el_encuentro_de_levante_llega_revelado(client):
 
     encuentro = gs.npcs_revelados_para_jugador(player_id)["sofia"]["encuentro"]
     assert encuentro["npc"]["nombre"] == "Sofía"
-    assert encuentro["npc"]["puntaje_lindura"] == 6
+    assert encuentro["npc"]["hot"] == 6
 
 
-def test_el_misterio_cae_al_resolver_el_intento(client):
-    """morocho_after es de 1 sola ronda: una tirada alcanza para resolverlo y revelarlo."""
+def test_el_misterio_cae_al_resolver_el_intento(client, monkeypatch):
+    """Con un golpe que le baja todo el HP de una, el encuentro se resuelve y revela."""
+    _forzar_total(monkeypatch, 999)
     player_id = unirse(client)
     gs.ajustar_na(player_id, gs.UMBRAL_MISTERIO_LEVANTE)
     gs.revelar_npc("morocho_after", zona_actual())
@@ -408,8 +435,9 @@ def test_el_misterio_cae_al_resolver_el_intento(client):
          client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws_dm.receive_json()
         ws.receive_json()
-        resultado = elegir_y_resolver(ws_dm, ws, "morocho_after", opcion_idx=0)
-        assert resultado["puntaje_lindura"] == 7
+        resultado = elegir_y_resolver(ws_dm, ws, "morocho_after", ataque_idx=0)
+        assert resultado["resuelto"] is True
+        assert resultado["exito"] is True
 
     encuentro = gs.npcs_revelados_para_jugador(player_id)["morocho_after"]["encuentro"]
     assert encuentro["npc"]["nombre"] == "El Morocho de Ojos Claros"
@@ -436,13 +464,14 @@ def test_otro_jugador_no_puede_elegir_opcion_en_el_encuentro_ajeno(client):
 
     with client.websocket_connect(f"/ws/player/{p2}") as ws2:
         ws2.receive_json()
-        ws2.send_json({"type": "elegir_opcion_encare", "npc_id": "sofia", "opcion_idx": 0})
+        ws2.send_json({"type": "elegir_ataque_encare", "npc_id": "sofia", "ataque_idx": 0})
         err = ws2.receive_json()
         assert err["type"] == "error"
 
 
-def test_no_se_puede_elegir_opcion_dos_veces_en_el_mismo_encuentro(client):
-    """morocho_after es de 1 sola ronda: la primera ronda ya resuelve el encuentro."""
+def test_no_se_puede_elegir_opcion_dos_veces_en_el_mismo_encuentro(client, monkeypatch):
+    """Con un golpe que resuelve el encuentro de una, la ronda siguiente ya no es válida."""
+    _forzar_total(monkeypatch, 999)
     player_id = unirse(client)
     gs.revelar_npc("morocho_after", zona_actual())
     gs.iniciar_encuentro("morocho_after", player_id)
@@ -451,9 +480,9 @@ def test_no_se_puede_elegir_opcion_dos_veces_en_el_mismo_encuentro(client):
          client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws_dm.receive_json()
         ws.receive_json()
-        elegir_y_resolver(ws_dm, ws, "morocho_after", opcion_idx=0)
+        elegir_y_resolver(ws_dm, ws, "morocho_after", ataque_idx=0)
 
-        ws.send_json({"type": "elegir_opcion_encare", "npc_id": "morocho_after", "opcion_idx": 0})
+        ws.send_json({"type": "elegir_ataque_encare", "npc_id": "morocho_after", "ataque_idx": 0})
         err = ws.receive_json()
         assert err["type"] == "error"
 
@@ -466,10 +495,10 @@ def test_no_se_puede_elegir_una_segunda_opcion_mientras_hay_una_pendiente(client
 
     with client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws.receive_json()
-        ws.send_json({"type": "elegir_opcion_encare", "npc_id": "hermano_mayor", "opcion_idx": 0})
+        ws.send_json({"type": "elegir_ataque_encare", "npc_id": "hermano_mayor", "ataque_idx": 0})
         ws.receive_json()  # estado, con la ronda pendiente
 
-        ws.send_json({"type": "elegir_opcion_encare", "npc_id": "hermano_mayor", "opcion_idx": 1})
+        ws.send_json({"type": "elegir_ataque_encare", "npc_id": "hermano_mayor", "ataque_idx": 1})
         err = ws.receive_json()
         assert err["type"] == "error"
 
@@ -486,26 +515,27 @@ def test_resolver_ronda_encare_sin_ninguna_ronda_pendiente_da_error(client):
         assert err["type"] == "error"
 
 
-def test_opcion_idx_fuera_de_rango_da_error(client):
+def test_ataque_idx_fuera_de_rango_da_error(client):
     player_id = unirse(client)
     gs.revelar_npc("hermano_mayor", zona_actual())
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
     with client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws.receive_json()
-        ws.send_json({"type": "elegir_opcion_encare", "npc_id": "hermano_mayor", "opcion_idx": 5})
+        ws.send_json({"type": "elegir_ataque_encare", "npc_id": "hermano_mayor", "ataque_idx": 5})
         err = ws.receive_json()
         assert err["type"] == "error"
 
 
-def test_stat_otro_invalido_da_error(client):
+def test_ataque_idx_invalido_da_error(client):
+    """Cualquier valor que no sea 0-2 ni "ultimate" es inválido."""
     player_id = unirse(client)
     gs.revelar_npc("hermano_mayor", zona_actual())
     gs.iniciar_encuentro("hermano_mayor", player_id)
 
     with client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws.receive_json()
-        ws.send_json({"type": "elegir_opcion_encare", "npc_id": "hermano_mayor", "stat_otro": "fuerza"})
+        ws.send_json({"type": "elegir_ataque_encare", "npc_id": "hermano_mayor", "ataque_idx": "no_existe"})
         err = ws.receive_json()
         assert err["type"] == "error"
 
@@ -523,7 +553,7 @@ def test_modificador_dm_se_suma_al_total_de_esa_ronda(client):
         ws_dm.receive_json()
         ws.receive_json()
 
-        resultado = elegir_y_resolver(ws_dm, ws, "hermano_mayor", opcion_idx=0, modificador_dm=4)
+        resultado = elegir_y_resolver(ws_dm, ws, "hermano_mayor", ataque_idx=0, modificador_dm=4)
         assert resultado["modificador_dm"] == 4
         assert resultado["total_ajustado"] == resultado["total"] + 4
 
@@ -533,19 +563,19 @@ def test_npcs_revelados_para_jugador_marca_pendiente_mientras_espera_al_dm(clien
     gs.revelar_npc("sofia", zona_actual())
     gs.iniciar_encuentro("sofia", player_id)
 
-    gs.elegir_opcion_encare(player_id, "sofia", opcion_idx=0)
+    gs.elegir_ataque_encare(player_id, "sofia", 0)
 
     visible = gs.npcs_revelados_para_jugador(player_id)["sofia"]["encuentro"]
-    # "pendiente" llega como booleano: el detalle crudo (stat/respuesta/siguiente que
-    # el DM necesita para resolver) no se filtra al jugador
+    # "pendiente" llega como booleano: el detalle crudo (qué ataque eligió, que el DM
+    # necesita para resolver) no se filtra al jugador
     assert visible["pendiente"] is True
-    assert "nodo" not in visible
 
 
-# --- árbol de diálogo: rondas, acumulado, "Otro" -----------------------------
+# --- combate por HP: rondas, daño, contraataque -------------------------------
 
 
-def test_arbol_de_dos_rondas_acumula_y_recien_resuelve_en_la_ultima(client):
+def test_el_hp_del_npc_baja_con_cada_ronda_y_recien_resuelve_al_llegar_a_cero(client, monkeypatch):
+    _forzar_total(monkeypatch, 11)  # 11 - defensa(2) = 9 de daño por ronda, hp(18) baja a 0 en 2
     player_id = unirse(client)
     gs.revelar_npc("sofia", zona_actual())
     gs.iniciar_encuentro("sofia", player_id)
@@ -555,20 +585,17 @@ def test_arbol_de_dos_rondas_acumula_y_recien_resuelve_en_la_ultima(client):
         ws_dm.receive_json()
         ws.receive_json()
 
-        ronda1 = elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
+        ronda1 = elegir_y_resolver(ws_dm, ws, "sofia", ataque_idx=0)
         assert ronda1["resuelto"] is False
-        assert ronda1["siguiente_nodo"]["texto"]
-        assert len(ronda1["siguiente_nodo"]["opciones"]) == 2
+        assert ronda1["hp_npc"] == 9
         encuentro_parcial = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
         assert encuentro_parcial["resuelto"] is False
         assert encuentro_parcial["rondas_jugadas"] == 1
-        assert encuentro_parcial["acumulado"] == ronda1["total_ajustado"]
 
-        ronda2 = elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
+        ronda2 = elegir_y_resolver(ws_dm, ws, "sofia", ataque_idx=0)
         assert ronda2["resuelto"] is True
-        assert ronda2["acumulado"] == ronda1["total_ajustado"] + ronda2["total_ajustado"]
-        assert ronda2["dificultad_total"] == 12 * 2
-        assert ronda2["puntaje_lindura"] == 6
+        assert ronda2["exito"] is True
+        assert ronda2["hp_npc"] == 0
 
     encuentro = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
     assert encuentro["resuelto"] is True
@@ -576,90 +603,60 @@ def test_arbol_de_dos_rondas_acumula_y_recien_resuelve_en_la_ultima(client):
     assert len(encuentro["tiradas"]) == 2
 
 
-def test_arbol_de_tres_rondas_confrontacion_varia_el_stat_por_opcion(client):
+def test_pierde_el_encuentro_si_llega_al_limite_de_rondas_sin_bajar_el_hp(client, monkeypatch):
+    _forzar_total(monkeypatch, -999)
     player_id = unirse(client)
-    gs.revelar_npc("patovica", zona_actual())
-    gs.iniciar_encuentro("patovica", player_id)
+    gs.revelar_npc("hermano_mayor", zona_actual())
+    gs.iniciar_encuentro("hermano_mayor", player_id)
 
     with client.websocket_connect("/ws/dm") as ws_dm, \
          client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws_dm.receive_json()
         ws.receive_json()
 
-        ronda1 = elegir_y_resolver(ws_dm, ws, "patovica", opcion_idx=0)
-        assert ronda1["stat"] == "carisma"
+        resultado = None
+        for _ in range(gs.LIMITE_RONDAS_ENCARE):
+            resultado = elegir_y_resolver(ws_dm, ws, "hermano_mayor", ataque_idx=0)
 
-        ronda2 = elegir_y_resolver(ws_dm, ws, "patovica", opcion_idx=0)
-        assert ronda2["stat"] == "suerte"
-
-        ronda3 = elegir_y_resolver(ws_dm, ws, "patovica", opcion_idx=0)
-        assert ronda3["resuelto"] is True
-        assert ronda3["stat"] == "suerte"
-        assert ronda3["dificultad_total"] == 14 * 3
-
-    encuentro = gs.game_state["npcs_revelados"]["patovica"]["encuentro"]
-    assert encuentro["rondas_jugadas"] == 3
-    assert encuentro["acumulado"] == ronda1["total_ajustado"] + ronda2["total_ajustado"] + ronda3["total_ajustado"]
-
-
-def test_otro_corta_el_encuentro_en_la_primera_ronda_de_un_arbol_de_profundidad_3(client):
-    player_id = unirse(client)
-    gs.revelar_npc("patovica", zona_actual())
-    gs.iniciar_encuentro("patovica", player_id)
-
-    with client.websocket_connect("/ws/dm") as ws_dm, \
-         client.websocket_connect(f"/ws/player/{player_id}") as ws:
-        ws_dm.receive_json()
-        ws.receive_json()
-
-        resultado = elegir_y_resolver(ws_dm, ws, "patovica", stat_otro="aguante")
         assert resultado["resuelto"] is True
-        assert resultado["stat"] == "aguante"
-        assert resultado["respuesta"] is None
-        assert resultado["dificultad_total"] == 14  # una sola ronda jugada
-
-    encuentro = gs.game_state["npcs_revelados"]["patovica"]["encuentro"]
-    assert encuentro["rondas_jugadas"] == 1
-    assert encuentro["resuelto"] is True
+        assert resultado["exito"] is False
 
 
-def test_otro_a_mitad_de_arbol_calcula_la_dificultad_con_las_rondas_jugadas_hasta_ahi(client):
+def test_el_contraataque_del_npc_llega_al_jugador_en_el_resultado_de_la_ronda(client):
     player_id = unirse(client)
-    gs.revelar_npc("patovica", zona_actual())
-    gs.iniciar_encuentro("patovica", player_id)
+    gs.revelar_npc("sofia", zona_actual())
+    gs.iniciar_encuentro("sofia", player_id)
 
     with client.websocket_connect("/ws/dm") as ws_dm, \
          client.websocket_connect(f"/ws/player/{player_id}") as ws:
         ws_dm.receive_json()
         ws.receive_json()
 
-        elegir_y_resolver(ws_dm, ws, "patovica", opcion_idx=0)
+        resultado = elegir_y_resolver(ws_dm, ws, "sofia", ataque_idx=0, habilidad_npc_idx=0)
+        assert resultado["nombre_habilidad_npc"] == "Te ignora de golpe"
+        assert resultado["stat_debuffado"] == "carisma"
 
-        resultado = elegir_y_resolver(ws_dm, ws, "patovica", stat_otro="astucia")
-        assert resultado["resuelto"] is True
-        assert resultado["dificultad_total"] == 14 * 2
-
-    encuentro = gs.game_state["npcs_revelados"]["patovica"]["encuentro"]
-    assert encuentro["rondas_jugadas"] == 2
+    encuentro = gs.game_state["npcs_revelados"]["sofia"]["encuentro"]
+    assert encuentro["debuffs_jugador"] == {"carisma": 3}
 
 
-def test_el_nodo_visible_no_expone_respuesta_ni_siguiente_ni_el_arbol_completo(client):
+def test_el_encuentro_visible_no_expone_las_habilidades_del_npc(client):
     player_id = unirse(client)
     gs.revelar_npc("sofia", zona_actual())
     gs.iniciar_encuentro("sofia", player_id)
 
     encuentro = gs.npcs_revelados_para_jugador(player_id)["sofia"]["encuentro"]
-    assert "arbol" not in encuentro["npc"]
+    assert "habilidades" not in encuentro["npc"]
     assert encuentro["pendiente"] is False
-    assert encuentro["nodo"]["texto"] == "Te mira de reojo, atenta a lo que decís."
-    for opcion in encuentro["nodo"]["opciones"]:
-        assert set(opcion.keys()) == {"texto", "stat"}
+    assert encuentro["hp_npc"] == 18
+    assert encuentro["hp_npc_max"] == 18
 
 
-def test_el_log_del_dm_registra_una_entrada_por_ronda_de_encuentro(client):
+def test_el_log_del_dm_registra_una_entrada_por_ronda_de_encuentro(client, monkeypatch):
     """Un encare de varias rondas deja una entrada por ronda en el log, no solo la
     última — si no, el DM pierde de vista cómo le fue al jugador en las rondas
     intermedias."""
+    _forzar_total(monkeypatch, 11)  # 2 rondas para bajar el hp(18) de sofía a 0
     player_id = unirse(client)
     gs.revelar_npc("sofia", zona_actual())
     gs.iniciar_encuentro("sofia", player_id)
@@ -669,8 +666,8 @@ def test_el_log_del_dm_registra_una_entrada_por_ronda_de_encuentro(client):
         ws_dm.receive_json()
         ws.receive_json()
 
-        elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
-        elegir_y_resolver(ws_dm, ws, "sofia", opcion_idx=0)
+        elegir_y_resolver(ws_dm, ws, "sofia", ataque_idx=0)
+        elegir_y_resolver(ws_dm, ws, "sofia", ataque_idx=0)
 
     assert len(gs.game_state["log_eventos"]) == 2
     assert gs.game_state["log_eventos"][0]["contexto"] == "Sofía (ronda 1)"

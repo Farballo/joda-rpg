@@ -43,6 +43,23 @@ function etiquetaModificadorDm(modificador) {
   return preset ? preset.label : `${modificador >= 0 ? "+" : ""}${modificador}`;
 }
 
+// mismo tope que LIMITE_RONDAS_ENCARE en game_state.py
+const LIMITE_RONDAS_ENCARE = 5;
+
+// selección en curso del DM para resolver la ronda pendiente de un encare: no se manda
+// nada al server hasta tocar "Resolver ronda" — viven acá afuera del DOM porque
+// #encuentro-en-curso se re-renderiza entero en cada estado_completo (mismo patrón que
+// menuJugadorAbierto/eventoConfigAbierto más abajo)
+let modificadorDmSeleccionado = null;
+let habilidadNpcSeleccionada = null; // 0-2, "libre", o null
+let textoLibreHabilidad = "";
+let statLibreHabilidad = "carisma";
+
+// último estado_completo recibido, para poder re-renderizar #encuentro-en-curso sin
+// esperar al próximo mensaje del server (ej. al abrir el form de habilidad "libre")
+let ultimoNpcsRevelados = {};
+let ultimoJugadoresDm = {};
+
 let personajes = [];
 let prendas = [];
 let eventos = {};
@@ -317,42 +334,103 @@ function renderEncuentroEnCurso(npcsRevelados, jugadores) {
 
   if (!enCurso) {
     cont.innerHTML = "";
+    modificadorDmSeleccionado = null;
+    habilidadNpcSeleccionada = null;
     return;
+  }
+
+  if (enCurso.npcId !== ultimoNpcEnCursoId) {
+    modificadorDmSeleccionado = null;
+    habilidadNpcSeleccionada = null;
   }
 
   const npc = npcs.find((n) => n.id === enCurso.npcId);
   const jugador = jugadores[enCurso.jugador_objetivo];
+  const personajeJugador = jugador ? personajes.find((p) => p.id === jugador.personaje_id) : null;
   const nombreNpc = npc ? `${npc.avatar} ${npc.nombre}` : enCurso.npcId;
   const nombreJugador = jugador ? jugador.nombre : "?";
 
-  if (enCurso.pendiente) {
-    const statTxt = NOMBRES_STAT[enCurso.pendiente.stat] || enCurso.pendiente.stat;
-    const botonesHtml = PRESETS_MODIFICADOR_DM.map(
-      (p) => `
-      <button type="button" data-action="resolver-ronda-encare" data-npc="${enCurso.npcId}" data-modificador="${p.modificador}">
-        ${p.label} (${p.modificador > 0 ? "+" : ""}${p.modificador})
-      </button>`
-    ).join("");
+  const hp = enCurso.hp_npc;
+  const hpMax = enCurso.hp_npc_max || 1;
+  const debuffs = Object.entries(enCurso.debuffs_jugador || {});
+  const debuffsHtml = debuffs.length
+    ? debuffs.map(([stat, valor]) => `<span class="batalla-debuff">${NOMBRES_STAT[stat]} -${valor}</span>`).join("")
+    : `<span class="dm-hint" style="margin:0">Sin debuffs activos.</span>`;
 
+  const cabeceraHtml = `
+    <div class="batalla-dm-cabecera">
+      <div class="batalla-dm-carta">${npc ? cartaNpcHtml(npc) : ""}</div>
+      <div class="batalla-dm-info">
+        <div class="batalla-dm-vs"><b>${nombreNpc}</b> vs <b>${nombreJugador}</b></div>
+        <div class="batalla-hp-barra"><div class="batalla-hp-fill" style="width:${Math.max(0, (hp / hpMax) * 100)}%"></div></div>
+        <div class="batalla-hp-label">❤️ ${hp} / ${hpMax}</div>
+        <span class="batalla-ronda">Ronda ${Math.min(enCurso.rondas_jugadas + 1, LIMITE_RONDAS_ENCARE)} / ${LIMITE_RONDAS_ENCARE}</span>
+        <div class="batalla-debuffs">${debuffsHtml}</div>
+      </div>
+      <div class="batalla-dm-carta batalla-dm-carta-jugador">${personajeJugador ? cartaMiniHtml(personajeJugador) : ""}</div>
+    </div>`;
+
+  if (!enCurso.pendiente) {
     cont.innerHTML = `
-      <div class="banner-encuentro banner-encuentro-pendiente">
-        <span style="font-size:1.1rem">🎙️</span>
+      ${cabeceraHtml}
+      <div class="banner-encuentro">
+        <span style="font-size:1.1rem">⏳</span>
         <div>
-          <b>${nombreJugador}</b> ya tiró su frase con <b>${nombreNpc}</b>
-          (va a tirar ${statTxt}) — ronda ${enCurso.rondas_jugadas + 1}.
-          <small>¿Cómo estuvo? Elegí y se tira al toque:</small>
-          <div class="encuentro-dificultad-botones">${botonesHtml}</div>
+          Esperando que <b>${nombreJugador}</b> elija un ataque contra <b>${nombreNpc}</b>.
+          <small>Hasta que tire (o saques al NPC de escena) no se puede arrancar otro encuentro.</small>
         </div>
       </div>`;
     return;
   }
 
+  const statTxt = NOMBRES_STAT[enCurso.pendiente.stat] || enCurso.pendiente.stat;
+  const botonesModHtml = PRESETS_MODIFICADOR_DM.map(
+    (p) => `
+    <button type="button" class="btn-mod-dm${modificadorDmSeleccionado === p.modificador ? " btn-seleccionado" : ""}"
+      data-action="elegir-modificador-dm" data-modificador="${p.modificador}">
+      ${p.label} (${p.modificador > 0 ? "+" : ""}${p.modificador})
+    </button>`
+  ).join("");
+
+  const habilidadesHtml = (npc ? npc.habilidades : []).map(
+    (h, i) => `
+    <button type="button" class="btn-habilidad-npc${habilidadNpcSeleccionada === i ? " btn-seleccionado" : ""}"
+      data-action="elegir-habilidad-npc" data-idx="${i}" title="${esc(h.texto)}">
+      ${h.nombre} <small>(${NOMBRES_STAT[h.stat_objetivo]})</small>
+    </button>`
+  ).join("");
+
+  const libreSeleccionada = habilidadNpcSeleccionada === "libre";
+  const formLibreHtml = libreSeleccionada
+    ? `
+      <div class="batalla-libre-form">
+        <input type="text" id="input-texto-libre-habilidad" placeholder="Qué hace o dice el NPC" value="${esc(textoLibreHabilidad)}">
+        <select id="select-stat-libre-habilidad">
+          ${Object.keys(NOMBRES_STAT).map((s) => `<option value="${s}" ${statLibreHabilidad === s ? "selected" : ""}>${NOMBRES_STAT[s]}</option>`).join("")}
+        </select>
+      </div>`
+    : "";
+
+  const puedeResolver = modificadorDmSeleccionado !== null && habilidadNpcSeleccionada !== null;
+
   cont.innerHTML = `
-    <div class="banner-encuentro">
-      <span style="font-size:1.1rem">⏳</span>
+    ${cabeceraHtml}
+    <div class="banner-encuentro banner-encuentro-pendiente">
+      <span style="font-size:1.1rem">🎙️</span>
       <div>
-        <b>${nombreNpc}</b> está encarando a <b>${nombreJugador}</b> — ronda ${enCurso.rondas_jugadas + 1}.
-        <small>Hasta que tire (o saques al NPC de escena) no se puede arrancar otro encuentro.</small>
+        <b>${nombreJugador}</b> ya tiró su frase (va a tirar ${statTxt}).
+        <small>¿Cómo estuvo?</small>
+        <div class="encuentro-dificultad-botones">${botonesModHtml}</div>
+        <small>¿Con qué contraataca ${npc ? npc.nombre : "el NPC"}?</small>
+        <div class="encuentro-dificultad-botones">
+          ${habilidadesHtml}
+          <button type="button" class="btn-habilidad-npc${libreSeleccionada ? " btn-seleccionado" : ""}"
+            data-action="elegir-habilidad-npc" data-idx="libre">🎭 Libre</button>
+        </div>
+        ${formLibreHtml}
+        <button type="button" class="btn-primario" id="btn-resolver-ronda-encare" data-npc="${enCurso.npcId}" ${puedeResolver ? "" : "disabled"}>
+          🎲 Resolver ronda
+        </button>
       </div>
     </div>`;
 }
@@ -499,7 +577,7 @@ function renderConfigEventos(eventosHabilitados) {
           const evento = todosFase.find((e) => e.titulo === titulo);
           if (!evento) return "";
           return `
-          <li class="config-evento-row">
+          <li class="config-evento-row" title="${esc(evento.texto)}">
             <input type="checkbox" checked data-fase="${fase}" data-titulo="${evento.titulo}">
             <span class="config-evento-orden">${i + 1}</span>
             <span class="config-evento-titulo">${evento.titulo}</span>
@@ -514,7 +592,7 @@ function renderConfigEventos(eventosHabilitados) {
       const filasExcluidas = excluidos
         .map(
           (evento) => `
-          <li class="config-evento-row config-evento-row-excluido">
+          <li class="config-evento-row config-evento-row-excluido" title="${esc(evento.texto)}">
             <input type="checkbox" data-fase="${fase}" data-titulo="${evento.titulo}">
             <span class="config-evento-orden">—</span>
             <span class="config-evento-titulo">${evento.titulo}</span>
@@ -605,6 +683,9 @@ function desgloseTirada(e) {
     const mod = e.debilidad_modificador || 0;
     partes.push(`😵 ${e.debilidad_nombre} ${mod >= 0 ? "+" : ""}${mod}`);
   }
+  if (e.debuff_valor) {
+    partes.push(`😈 Debuff -${e.debuff_valor}`);
+  }
   if (e.modificador_na) {
     partes.push(`NA ${e.modificador_na >= 0 ? "+" : ""}${e.modificador_na}`);
   }
@@ -612,6 +693,12 @@ function desgloseTirada(e) {
   // DM — distinto a que la tirada nunca haya pasado por ese paso (undefined)
   if (e.modificador_dm !== undefined && e.modificador_dm !== null) {
     partes.push(`DM ${etiquetaModificadorDm(e.modificador_dm)}`);
+  }
+  // solo las rondas de encare traen "dano" (total ya con la Defensa del NPC
+  // restada) — sin esto el DM solo ve el total crudo y no le cierra la cuenta
+  // de por qué el HP bajó menos de lo que esperaba
+  if (e.dano !== undefined && e.dano !== null) {
+    partes.push(`💥 ${e.dano} de daño`);
   }
 
   return partes.join(" · ");
@@ -839,9 +926,16 @@ function iniciarEncuentro(npcId, jugadorObjetivo) {
   ws.send(JSON.stringify({ type: "iniciar_encuentro", npc_id: npcId, jugador_objetivo: jugadorObjetivo }));
 }
 
-function resolverRondaEncare(npcId, modificadorDm) {
+function resolverRondaEncare(npcId, modificadorDm, habilidadNpcIdx, statObjetivoLibre, textoLibre) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ type: "resolver_ronda_encare", npc_id: npcId, modificador_dm: modificadorDm }));
+  ws.send(JSON.stringify({
+    type: "resolver_ronda_encare",
+    npc_id: npcId,
+    modificador_dm: modificadorDm,
+    habilidad_npc_idx: habilidadNpcIdx,
+    stat_objetivo_libre: statObjetivoLibre,
+    texto_libre: textoLibre,
+  }));
 }
 
 function resolverSituacionPendiente(modificadorDm) {
@@ -965,6 +1059,8 @@ function conectarWs() {
       document.getElementById("fase-actual").textContent = NOMBRES_FASE[msg.fase] || msg.fase;
       document.body.dataset.fase = msg.fase || "previa";
       eventosHabilitadosActual = msg.eventos_habilitados || {};
+      ultimoNpcsRevelados = msg.npcs_revelados || {};
+      ultimoJugadoresDm = msg.jugadores || {};
       renderConfigMapas(msg.mapas_habilitados);
       renderConfigEventos(msg.eventos_habilitados);
       renderConfigJugadores(msg.jugadores);
@@ -1060,9 +1156,46 @@ document.getElementById("btn-revelar-npc").addEventListener("click", () => {
 });
 
 document.getElementById("encuentro-en-curso").addEventListener("click", (e) => {
-  const btn = e.target.closest('button[data-action="resolver-ronda-encare"]');
-  if (!btn) return;
-  resolverRondaEncare(btn.dataset.npc, Number(btn.dataset.modificador));
+  const modBtn = e.target.closest('button[data-action="elegir-modificador-dm"]');
+  if (modBtn) {
+    modificadorDmSeleccionado = Number(modBtn.dataset.modificador);
+    modBtn.parentElement.querySelectorAll(".btn-mod-dm").forEach((b) => b.classList.remove("btn-seleccionado"));
+    modBtn.classList.add("btn-seleccionado");
+    const btnResolver = document.getElementById("btn-resolver-ronda-encare");
+    if (btnResolver) btnResolver.disabled = !(modificadorDmSeleccionado !== null && habilidadNpcSeleccionada !== null);
+    return;
+  }
+
+  const habBtn = e.target.closest('button[data-action="elegir-habilidad-npc"]');
+  if (habBtn) {
+    habilidadNpcSeleccionada = habBtn.dataset.idx === "libre" ? "libre" : Number(habBtn.dataset.idx);
+    // "libre" hace aparecer/desaparecer el form de texto+stat: re-renderiza entero
+    // en vez de solo togglear clases, a diferencia del preset de modificador_dm
+    renderEncuentroEnCurso(ultimoNpcsRevelados, ultimoJugadoresDm);
+    return;
+  }
+
+  const btnResolver = e.target.closest('button[id="btn-resolver-ronda-encare"]');
+  if (btnResolver) {
+    const inputTexto = document.getElementById("input-texto-libre-habilidad");
+    const selectStat = document.getElementById("select-stat-libre-habilidad");
+    if (habilidadNpcSeleccionada === "libre") {
+      textoLibreHabilidad = inputTexto ? inputTexto.value : "";
+      statLibreHabilidad = selectStat ? selectStat.value : "carisma";
+    }
+    resolverRondaEncare(
+      btnResolver.dataset.npc, modificadorDmSeleccionado, habilidadNpcSeleccionada, statLibreHabilidad, textoLibreHabilidad
+    );
+    modificadorDmSeleccionado = null;
+    habilidadNpcSeleccionada = null;
+    textoLibreHabilidad = "";
+  }
+});
+
+// el input/select del form "libre" no deben perder el foco/valor por el listener de
+// arriba: sus propios cambios no disparan nada hasta tocar "Resolver ronda"
+document.getElementById("encuentro-en-curso").addEventListener("input", (e) => {
+  if (e.target.id === "input-texto-libre-habilidad") textoLibreHabilidad = e.target.value;
 });
 
 document.getElementById("situacion-actual-card").addEventListener("click", (e) => {
@@ -1231,6 +1364,7 @@ function poblarSelectDummyPersonaje() {
   await cargarMapa();
   await cargarNpcs();
   await cargarCartas();
+  await cargarCartasNpc();
   await cargarIpLan();
   poblarSelectDummyPersonaje();
   conectarWs();

@@ -341,16 +341,6 @@ form#form-join > button[type="submit"] {
   justify-content: center;
 }
 
-/* con #id para ganarle a las reglas de .npc-card-popup que vienen más abajo */
-#encuentro-overlay .encuentro-popup {
-  border-color: var(--violet);
-  box-shadow: 0 0 48px rgba(157, 66, 255, 0.45);
-}
-
-#encuentro-overlay .eyebrow {
-  color: var(--violet);
-}
-
 .npc-card-popup {
   width: min(100%, 420px);
   background: linear-gradient(135deg, var(--panel2), var(--bg));
@@ -3009,5 +2999,270 @@ body[data-fase="after"] .dm-fase-pill {
   letter-spacing: 0.02em;
   color: #3a2a1a;
   text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Pantalla de batalla del encare (levante/confrontación) — jugador y DM
+   comparten el mismo lenguaje visual: carta del NPC con barra de HP y stats,
+   debuffs activos, y del lado del jugador los botones de ataque grandes
+   (heredan el tamaño de .npc-card-actions button, ver más arriba).
+   ========================================================================== */
+
+.carta.carta-npc.carta-dibujada {
+  border-color: var(--violet);
+}
+
+.batalla-popup {
+  width: min(100%, 440px);
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: linear-gradient(135deg, var(--panel2), var(--bg));
+  border: 1px solid var(--violet);
+  box-shadow: 0 0 48px rgba(157, 66, 255, 0.45);
+  border-radius: 20px;
+  padding: 1.25rem;
+  color: var(--text);
+  animation: npc-card-in 0.35s ease;
+}
+
+.batalla-npc {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.batalla-npc-carta {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.batalla-npc-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.batalla-npc-info .eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: bold;
+}
+
+.batalla-npc-info h2 {
+  margin: 0.2rem 0 0.1rem;
+  font-size: 1.25rem;
+}
+
+.batalla-npc-info .npc-card-apodo {
+  margin: 0 0 0.5rem;
+}
+
+.batalla-hp-barra {
+  height: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.batalla-hp-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--pink), var(--violet));
+  transition: width 0.4s ease;
+}
+
+.batalla-hp-label {
+  margin: 0.3rem 0 0.55rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.batalla-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.batalla-stat {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.batalla-medio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.batalla-ronda {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--yellow);
+  background: rgba(255, 216, 74, 0.12);
+  border: 1px solid var(--yellow);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  white-space: nowrap;
+}
+
+.batalla-debuffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.batalla-debuff {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  background: rgba(255, 70, 111, 0.1);
+  white-space: nowrap;
+}
+
+.batalla-jugador {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.batalla-jugador-carta {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.batalla-jugador-nombre {
+  font-weight: 800;
+  color: var(--cyan);
+  font-size: 0.9rem;
+}
+
+.btn-ataque-encare small,
+.btn-ataque-ultimate small {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+.btn-ataque-ultimate {
+  background: linear-gradient(90deg, var(--violet), var(--pink));
+  color: #fff;
+  font-weight: 800;
+  border: none;
+}
+
+.btn-ataque-ultimate:disabled {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+.btn-ataque-ultimate:disabled small {
+  color: var(--muted);
+}
+
+/* ---- vista espejada del DM, dentro de #encuentro-en-curso ---- */
+
+.batalla-dm-cabecera {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-top: 0.6rem;
+}
+
+.batalla-dm-carta {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.batalla-dm-carta-jugador {
+  width: 90px;
+}
+
+.batalla-dm-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.batalla-dm-vs {
+  font-size: 0.85rem;
+}
+
+.batalla-dm-info .batalla-hp-barra {
+  height: 12px;
+}
+
+.batalla-dm-info .batalla-ronda {
+  align-self: flex-start;
+}
+
+.btn-habilidad-npc {
+  border-color: var(--violet);
+}
+
+.btn-habilidad-npc:hover {
+  background: var(--violet);
+  color: #fff;
+}
+
+.btn-mod-dm.btn-seleccionado {
+  background: var(--yellow);
+  color: #241a06;
+  border-color: var(--yellow);
+}
+
+.btn-habilidad-npc.btn-seleccionado {
+  background: var(--violet);
+  color: #fff;
+  border-color: var(--violet);
+}
+
+.batalla-libre-form {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.batalla-libre-form input {
+  flex: 2;
+  min-width: 160px;
+}
+
+.batalla-libre-form select {
+  flex: 1;
+  min-width: 110px;
+}
+
+#btn-resolver-ronda-encare {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .batalla-hp-fill {
+    transition: none;
+  }
 }
 
